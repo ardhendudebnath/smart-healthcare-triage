@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 *.log
 .claude/
+
+# Secrets — never commit. .env.example is the safe template to share.
+.env
