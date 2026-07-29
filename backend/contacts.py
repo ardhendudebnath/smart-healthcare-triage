@@ -83,6 +83,24 @@ MENTAL_HEALTH = {
     "note": "Free, confidential, 24/7. Available in 20+ languages.",
 }
 
+# Shown when someone mentions suicide or self-harm. The counselling line comes
+# first: the need there is to talk to a person, not to be dispatched an
+# ambulance. 112 stays listed for immediate physical danger.
+CRISIS_CONTACTS = [
+    MENTAL_HEALTH,
+    {
+        "name": "National Emergency Number",
+        "number": "112",
+        "note": "If you are in immediate physical danger.",
+    },
+]
+
+CRISIS_MESSAGE = (
+    "It sounds like you may be going through something very difficult. You "
+    "don't have to handle it alone — please talk to someone now. Tele-MANAS "
+    "is free, confidential and available 24/7."
+)
+
 DISCLAIMER = (
     "This is an automated prototype, not medical advice and not a diagnosis. "
     "If you think this is an emergency, call 112 immediately rather than "

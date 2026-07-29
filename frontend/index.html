@@ -41,6 +41,15 @@
   #result.urgent_care { background: #ffedd5; border: 1px solid #ea580c; }
   #result.self_care { background: #dcfce7; border: 1px solid #16a34a; }
   #result.unknown { background: #f3f4f6; border: 1px solid #6b7280; }
+  #result.crisis { background: #ede9fe; border: 1px solid #6d28d9; }
+  #safety-note {
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-style: italic;
+  }
   #result h2 { margin: 0 0 8px; font-size: 1.1rem; text-transform: uppercase; }
   #error { color: #dc2626; margin-top: 12px; display: none; }
 
@@ -77,7 +86,8 @@
   <div id="result">
     <h2 id="level"></h2>
     <p id="advice"></p>
-    <p><strong>Symptoms detected:</strong> <span id="symptoms"></span></p>
+    <p id="symptoms-line"><strong>Symptoms detected:</strong> <span id="symptoms"></span></p>
+    <div id="safety-note"></div>
     <div id="contacts"></div>
   </div>
   <div id="disclaimer"></div>
@@ -115,6 +125,15 @@
         document.getElementById("advice").textContent = data.message;
         document.getElementById("symptoms").textContent =
           data.symptoms_detected.length ? data.symptoms_detected.join(", ") : "none";
+
+        // A crisis result is not a symptom analysis — hide the symptom line
+        // rather than showing "Symptoms detected: none" under it.
+        document.getElementById("symptoms-line").style.display =
+          data.urgency_level === "crisis" ? "none" : "block";
+
+        const noteEl = document.getElementById("safety-note");
+        noteEl.textContent = data.safety_note || "";
+        noteEl.style.display = data.safety_note ? "block" : "none";
 
         // Build contacts as tel: links so they're one tap on a phone.
         const contactsEl = document.getElementById("contacts");
