@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Smart Healthcare Triage</title>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 0 16px;
+    color: #222;
+  }
+  h1 { font-size: 1.4rem; }
+  textarea {
+    width: 100%;
+    height: 90px;
+    font-size: 1rem;
+    padding: 10px;
+    box-sizing: border-box;
+    resize: vertical;
+  }
+  button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  #result {
+    margin-top: 20px;
+    padding: 16px;
+    border-radius: 8px;
+    display: none;
+  }
+  #result.emergency { background: #fee2e2; border: 1px solid #dc2626; }
+  #result.urgent_care { background: #ffedd5; border: 1px solid #ea580c; }
+  #result.self_care { background: #dcfce7; border: 1px solid #16a34a; }
+  #result.unknown { background: #f3f4f6; border: 1px solid #6b7280; }
+  #result h2 { margin: 0 0 8px; font-size: 1.1rem; text-transform: uppercase; }
+  #error { color: #dc2626; margin-top: 12px; display: none; }
+</style>
+</head>
+<body>
+  <h1>Smart Healthcare Triage (Prototype)</h1>
+  <p>Describe your symptoms in plain language.</p>
+  <textarea id="message" placeholder="e.g. I have chest pain and difficulty breathing"></textarea>
+  <br>
+  <button id="submitBtn">Check Symptoms</button>
+  <div id="error"></div>
+  <div id="result">
+    <h2 id="level"></h2>
+    <p id="advice"></p>
+    <p><strong>Symptoms detected:</strong> <span id="symptoms"></span></p>
+  </div>
+
+  <script>
+    const API_URL = "http://127.0.0.1:8000/triage";
+    const btn = document.getElementById("submitBtn");
+    const messageEl = document.getElementById("message");
+    const resultEl = document.getElementById("result");
+    const errorEl = document.getElementById("error");
+
+    btn.addEventListener("click", async () => {
+      const message = messageEl.value.trim();
+      if (!message) return;
+
+      btn.disabled = true;
+      btn.textContent = "Checking...";
+      errorEl.style.display = "none";
+      resultEl.style.display = "none";
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+
+        const data = await res.json();
+
+        resultEl.className = data.urgency_level;
+        document.getElementById("level").textContent = data.urgency_level.replace("_", " ");
+        document.getElementById("advice").textContent = data.message;
+        document.getElementById("symptoms").textContent =
+          data.symptoms_detected.length ? data.symptoms_detected.join(", ") : "none";
+        resultEl.style.display = "block";
+      } catch (err) {
+        errorEl.textContent = "Could not reach the triage server. Is it running at " + API_URL + "?";
+        errorEl.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Check Symptoms";
+      }
+    });
+  </script>
+</body>
+</html>
