@@ -18,7 +18,10 @@ load_dotenv()
 
 log = logging.getLogger(__name__)
 
-MODEL = "gemini-2.0-flash"
+# Alias that tracks the current Flash model. Pinned versions like
+# gemini-2.0-flash return "limit: 0" (no free-tier quota) or 404 for newly
+# created API keys, so prefer the alias.
+MODEL = "gemini-flash-latest"
 
 # Constrain output to the symptoms knowledge_graph.py actually has rules for.
 # An invented symptom would just fall through to self_care, which hides the gap.
@@ -82,12 +85,14 @@ def is_enabled() -> bool:
     return _get_client() is not None
 
 
-def extract_symptoms_llm(text: str, timeout_seconds: float = 8.0) -> Optional[List[str]]:
+def extract_symptoms_llm(text: str, timeout_seconds: float = 20.0) -> Optional[List[str]]:
     """Extract symptoms via Gemini.
 
     Returns None on any failure (no key, rate limit, network error, bad
     response) so the caller can fall back to offline extraction. This function
     must never raise — a triage request should not fail because the LLM did.
+
+    The API rejects deadlines under 10s, so keep timeout_seconds above that.
     """
     client = _get_client()
     if client is None or not text or not text.strip():
