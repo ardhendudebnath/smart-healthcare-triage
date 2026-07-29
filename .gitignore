@@ -2,3 +2,4 @@ smt/
 __pycache__/
 *.pyc
 *.log
+.claude/
