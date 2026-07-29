@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from nlp_utils import extract_symptoms
 from knowledge_graph import assess_urgency
 from llm_extract import extract_symptoms_llm, is_enabled
+from contacts import DISCLAIMER, get_contacts
 
 app = FastAPI(title="Smart Healthcare Triage Prototype")
 
@@ -38,6 +39,8 @@ def triage(request: TriageRequest):
         "urgency_level": result["level"],
         "message": result["message"],
         "extraction_source": source,
+        "contacts": get_contacts(result["level"]),
+        "disclaimer": DISCLAIMER,
     }
 
 
