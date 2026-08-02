@@ -1,4 +1,8 @@
-"""Symptom extraction using spaCy lemmatization, fuzzy matching, and negation detection."""
+"""Symptom extraction using spaCy lemmatization, fuzzy matching, and negation detection.
+
+The vocabulary itself lives in symptoms.py. This module only decides which of
+those symptoms a piece of free text mentions.
+"""
 
 from typing import List, Set
 
@@ -6,160 +10,10 @@ import spacy
 from rapidfuzz import fuzz
 from spacy.matcher import PhraseMatcher
 
-nlp = spacy.load("en_core_web_sm")
+from phrases_indic import extract_indic
+from symptoms import SYMPTOM_PHRASES
 
-# Each symptom maps to the phrases people actually use. Matching is done on
-# lemmas, so "coughing" / "coughed" / "coughs" all reduce to "cough" and only
-# the base form needs listing here.
-SYMPTOM_PHRASES = {
-    "chest_pain": [
-        "chest pain",
-        "chest hurt",
-        "pain in my chest",
-        "chest tightness",
-        "tight chest",
-        "chest is tight",
-        "chest feels tight",
-        "chest pressure",
-        "pressure in my chest",
-    ],
-    "difficulty_breathing": [
-        "difficulty breathing",
-        "trouble breathing",
-        "hard to breathe",
-        "can not breathe",
-        "cannot breathe",
-        "short of breath",
-        "shortness of breath",
-        "breathless",
-        "gasping",
-        "wheeze",
-    ],
-    "fever": [
-        "fever",
-        "feverish",
-        "high temperature",
-        "running a temperature",
-        "burning up",
-        "chills",
-    ],
-    "cough": [
-        "cough",
-        "coughing fit",
-        "dry cough",
-        "wet cough",
-    ],
-    "nausea": [
-        "nausea",
-        "nauseous",
-        "feel sick",
-        "sick to my stomach",
-        "vomit",
-        "throwing up",
-        "throw up",
-        "queasy",
-    ],
-    "dizziness": [
-        "dizziness",
-        "dizzy",
-        "lightheaded",
-        "light headed",
-        "spinning",
-        "faint",
-        "vertigo",
-    ],
-    "headache": [
-        "headache",
-        "head ache",
-        "head hurt",
-        "head is killing me",
-        "migraine",
-        "pain in my head",
-        "splitting head",
-    ],
-    "abdominal_pain": [
-        "stomach pain",
-        "stomach ache",
-        "stomach hurt",
-        "tummy pain",
-        "tummy ache",
-        "abdominal pain",
-        "belly pain",
-        "cramps",
-        "pain in my stomach",
-    ],
-    "sore_throat": [
-        "sore throat",
-        "throat pain",
-        "throat hurt",
-        "painful swallowing",
-        "hurts to swallow",
-        "scratchy throat",
-    ],
-    "diarrhea": [
-        "diarrhea",
-        "diarrhoea",
-        "loose motion",
-        "loose stool",
-        "watery stool",
-        "upset stomach",
-    ],
-    "fatigue": [
-        "fatigue",
-        "very tired",
-        "exhausted",
-        "no energy",
-        "weakness",
-        "worn out",
-        "run down",
-    ],
-    "rash": [
-        "rash",
-        "skin rash",
-        "red spots",
-        "hives",
-        "itchy skin",
-        "breaking out",
-    ],
-    # --- Red-flag symptoms. These carry more weight in knowledge_graph.py ---
-    "confusion": [
-        "confusion",
-        "confused",
-        "disoriented",
-        "not making sense",
-        "can not think straight",
-        "cannot think straight",
-        "delirious",
-    ],
-    "neck_stiffness": [
-        "stiff neck",
-        "neck stiffness",
-        "neck is stiff",
-        "can not move my neck",
-        "cannot move my neck",
-        "neck hurts to bend",
-    ],
-    "slurred_speech": [
-        "slurred speech",
-        "slurring",
-        "speech is slurred",
-        "can not speak properly",
-        "cannot speak properly",
-        "trouble speaking",
-        "words are not coming out",
-    ],
-    "one_sided_weakness": [
-        "one side of my body",
-        "left side is weak",
-        "right side is weak",
-        "face is drooping",
-        "face drooping",
-        "arm went numb",
-        "numbness on one side",
-        "can not move my arm",
-        "cannot move my arm",
-    ],
-}
+nlp = spacy.load("en_core_web_sm")
 
 # Words that flip the meaning of a symptom mentioned after them.
 NEGATION_TOKENS = {"no", "not", "never", "without", "deny", "denies", "n't"}
@@ -174,6 +28,25 @@ SCOPE_BREAK_DEPS = {"conj", "appos"}
 # short words start colliding.
 FUZZY_THRESHOLD = 86
 
+# Longest phrase in the vocabulary, in words. Bounds how many n-gram sizes a
+# request has to build. Derived rather than hardcoded so adding a longer phrase
+# to symptoms.py cannot silently make it unmatchable.
+MAX_PHRASE_WORDS = max(
+    len(phrase.split()) for phrases in SYMPTOM_PHRASES.values() for phrase in phrases
+)
+
+# A token run spanning one of these joins two separate complaints, so comparing
+# it against a phrase that has no conjunction of its own is meaningless — and
+# occasionally harmful, because short function words hide inside longer ones.
+# "my knee is swollen and painful" produced the run "swollen and", which scored
+# 92 against the phrase "swollen gland" purely because "and" sits inside
+# "gland", and reported swollen glands to someone with a swollen knee.
+#
+# Phrases that legitimately contain a conjunction ("pins and needles", "red and
+# swollen skin") are still matched, by requiring the phrase to contain the same
+# conjunction rather than dropping such runs outright.
+CONJUNCTIONS = {"and", "or", "but", "nor", "plus"}
+
 
 def _build_matcher() -> PhraseMatcher:
     matcher = PhraseMatcher(nlp.vocab, attr="LEMMA")
@@ -185,6 +58,20 @@ def _build_matcher() -> PhraseMatcher:
 
 
 matcher = _build_matcher()
+
+# Phrases grouped by word count, per symptom, built once at import. The fuzzy
+# pass compares each phrase only against token runs of the same length, so this
+# is the shape it needs. Each phrase carries the set of conjunctions it contains
+# so the run check does not have to re-split it on every request.
+PHRASES_BY_WORD_COUNT = {}
+for _symptom, _phrases in SYMPTOM_PHRASES.items():
+    _grouped = {}
+    for _phrase in _phrases:
+        _words = _phrase.split()
+        _grouped.setdefault(len(_words), []).append(
+            (_phrase, CONJUNCTIONS.intersection(_words))
+        )
+    PHRASES_BY_WORD_COUNT[_symptom] = _grouped
 
 
 def _negation_scopes(doc) -> List[tuple]:
@@ -237,29 +124,67 @@ def _is_negated(start: int, end: int, scopes: List[tuple]) -> bool:
 
 
 def _fuzzy_matches(doc, already_found: Set[str], negated_indices: Set[int]) -> Set[str]:
-    """Catch misspellings the exact matcher missed, e.g. 'chets pain'.
+    """Catch misspellings the exact matcher missed, e.g. 'chets pain', 'feverr'.
 
     Negated tokens are stripped before matching. Fuzzy matching runs on the
     whole sentence, so without this it would happily re-find a symptom the
     user just denied — the phrase matcher's negation handling can't protect a
     symptom it never matched in the first place.
+
+    Each phrase is compared with `ratio` against runs of tokens the same length
+    as the phrase, rather than with `partial_ratio` against the whole sentence.
+    `partial_ratio` looks like the natural choice for finding a phrase inside a
+    longer description, but it ignores word boundaries, and at 79 symptoms that
+    breaks badly in two ways:
+
+    - Short phrases become substring searches. "burn" scores 100 against
+      "burning when I urinate", reporting a burn injury to someone with a urine
+      infection.
+    - Phrases sharing a prefix bleed into each other. "swollen legs" matched
+      swollen gums, swollen lips, swollen glands and swollen joints all at once.
+
+    Anchoring both ends against equal-length token runs fixes both, because the
+    comparison has to account for the whole phrase: "burn" vs "burning" scores
+    73 and is rejected, "swollen gum" vs "swollen leg" scores 73 and is
+    rejected, while a typed "feverr" vs "fever" scores 91 and is accepted.
+
+    The limit of this approach is transposition-heavy typos: "naseua" for
+    "nausea" scores below the threshold and is missed. Lowering the threshold to
+    catch it brings the prefix collisions straight back, so it stays missed —
+    the exact matcher and the LLM path both cover ordinary phrasing anyway.
     """
     found = set()
-    text = " ".join(
+    tokens = [
         token.lemma_.lower()
         for token in doc
         if not token.is_punct and token.i not in negated_indices
-    )
-    if not text.strip():
+    ]
+    if not tokens:
         return found
 
-    for symptom, phrases in SYMPTOM_PHRASES.items():
+    # Token runs by length, built once per request and shared across all
+    # symptoms — the inner loop would otherwise rebuild them ~450 times. Each
+    # run is paired with the conjunctions it spans, so the check below is a set
+    # comparison rather than a re-split.
+    runs = {}
+    for n in range(1, MAX_PHRASE_WORDS + 1):
+        sized = []
+        for i in range(len(tokens) - n + 1):
+            window = tokens[i : i + n]
+            sized.append((" ".join(window), CONJUNCTIONS.intersection(window)))
+        runs[n] = sized
+
+    for symptom, grouped in PHRASES_BY_WORD_COUNT.items():
         if symptom in already_found:
             continue
-        for phrase in phrases:
-            # partial_ratio finds the best-matching window, so a phrase can be
-            # matched inside a longer sentence without splitting it manually.
-            if fuzz.partial_ratio(phrase, text) >= FUZZY_THRESHOLD:
+        for word_count, phrases in grouped.items():
+            candidates = runs.get(word_count, ())
+            if any(
+                joined.issubset(phrase_conjunctions)
+                and fuzz.ratio(phrase, run) >= FUZZY_THRESHOLD
+                for phrase, phrase_conjunctions in phrases
+                for run, joined in candidates
+            ):
                 found.add(symptom)
                 break
     return found
@@ -270,9 +195,14 @@ def extract_symptoms(text: str) -> List[str]:
 
     Handles word-form variation via lemmatization, typos via fuzzy matching,
     and drops symptoms the user explicitly denied ("no fever").
+
+    Hindi and Bengali get a separate, much narrower pass — see phrases_indic.py
+    for why offline coverage in those languages is red flags only.
     """
     if not text or not text.strip():
         return []
+
+    found_indic = set(extract_indic(text))
 
     doc = nlp(text)
     scopes = _negation_scopes(doc)
@@ -295,4 +225,8 @@ def extract_symptoms(text: str) -> List[str]:
     for symptom in _fuzzy_matches(doc, found | negated_symptoms, all_negated):
         found.add(symptom)
 
-    return sorted(found)
+    # Indic matches are unioned in rather than merged before the English passes:
+    # they come from literal substring matching and must not be handed to the
+    # English negation logic, which would be reasoning about tokens spaCy could
+    # not parse in the first place.
+    return sorted(found | found_indic)

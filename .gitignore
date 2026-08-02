@@ -6,3 +6,6 @@ __pycache__/
 
 # Secrets — never commit. .env.example is the safe template to share.
 .env
+
+# Real doctor contact details. doctors.example.json is the safe template.
+doctors.json

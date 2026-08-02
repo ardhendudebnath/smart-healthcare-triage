@@ -15,6 +15,8 @@ that nothing is wrong. Those costs are not equal.
 import re
 from typing import List, Optional
 
+from phrases_indic import check_crisis_indic, check_emergency_indic
+
 # Phrases that mean "emergency" regardless of which symptoms were extracted.
 # Grouped only for readability -- any match escalates the same way.
 EMERGENCY_OVERRIDE_PHRASES = {
@@ -111,21 +113,33 @@ def _contains_any(text: str, phrases: List[str]) -> bool:
 
 
 def check_emergency_override(text: str) -> Optional[str]:
-    """Return the category name if the text describes an obvious emergency."""
+    """Return the category name if the text describes an obvious emergency.
+
+    Checks Hindi and Bengali as well as English. These overrides are the last
+    line before someone in danger is told nothing is wrong, so they cannot be
+    English-only in an app aimed at Indian users.
+    """
     if not text:
         return None
     normalised = _normalise(text)
     for category, phrases in EMERGENCY_OVERRIDE_PHRASES.items():
         if _contains_any(normalised, phrases):
             return category
-    return None
+    return check_emergency_indic(text)
 
 
 def check_crisis(text: str) -> bool:
-    """True if the text mentions suicide or self-harm."""
+    """True if the text mentions suicide or self-harm, in any supported language.
+
+    The most important thing in this module to get right in every language: a
+    person writing about self-harm in Bengali needs the counselling line just as
+    much as one writing in English.
+    """
     if not text:
         return False
-    return _contains_any(_normalise(text), CRISIS_PHRASES)
+    if _contains_any(_normalise(text), CRISIS_PHRASES):
+        return True
+    return check_crisis_indic(text)
 
 
 def has_severity_marker(text: str) -> bool:
