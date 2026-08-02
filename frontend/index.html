@@ -2,182 +2,202 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Smart Healthcare Triage</title>
-<style>
-  body {
-    font-family: system-ui, sans-serif;
-    max-width: 600px;
-    margin: 40px auto;
-    padding: 0 16px;
-    color: #222;
-  }
-  h1 { font-size: 1.4rem; }
-  textarea {
-    width: 100%;
-    height: 90px;
-    font-size: 1rem;
-    padding: 10px;
-    box-sizing: border-box;
-    resize: vertical;
-  }
-  button {
-    margin-top: 10px;
-    padding: 10px 20px;
-    font-size: 1rem;
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-  button:disabled { opacity: 0.6; cursor: default; }
-  #result {
-    margin-top: 20px;
-    padding: 16px;
-    border-radius: 8px;
-    display: none;
-  }
-  #result.emergency { background: #fee2e2; border: 1px solid #dc2626; }
-  #result.urgent_care { background: #ffedd5; border: 1px solid #ea580c; }
-  #result.self_care { background: #dcfce7; border: 1px solid #16a34a; }
-  #result.unknown { background: #f3f4f6; border: 1px solid #6b7280; }
-  #result.crisis { background: #ede9fe; border: 1px solid #6d28d9; }
-  #safety-note {
-    margin-top: 10px;
-    padding: 8px 10px;
-    background: rgba(0,0,0,0.06);
-    border-radius: 4px;
-    font-size: 0.85rem;
-    font-style: italic;
-  }
-  #result h2 { margin: 0 0 8px; font-size: 1.1rem; text-transform: uppercase; }
-  #error { color: #dc2626; margin-top: 12px; display: none; }
-
-  #contacts { margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.15); }
-  #contacts h3 { margin: 0 0 8px; font-size: 0.95rem; }
-  .contact { margin-bottom: 10px; }
-  .contact a {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: inherit;
-    text-decoration: none;
-    border-bottom: 2px solid currentColor;
-  }
-  .contact .cname { font-size: 0.9rem; }
-  .contact .cnote { font-size: 0.85rem; opacity: 0.8; }
-  #disclaimer {
-    display: none;
-    margin-top: 20px;
-    padding: 10px 12px;
-    background: #f3f4f6;
-    border-left: 3px solid #6b7280;
-    font-size: 0.85rem;
-    color: #374151;
-  }
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
+<!--
+  Text carries data-i18n="<key>" and is filled in from the backend at load, so
+  this file holds no user-facing English of its own. Adding a language is a
+  backend-only change, and the English written inline below is only what shows
+  in the half-second before the strings arrive (or if the server is unreachable).
+-->
 <body>
-  <h1>Smart Healthcare Triage (Prototype)</h1>
-  <p>Describe your symptoms in plain language.</p>
-  <textarea id="message" placeholder="e.g. I have chest pain and difficulty breathing"></textarea>
-  <br>
-  <button id="submitBtn">Check Symptoms</button>
-  <div id="error"></div>
-  <div id="result">
-    <h2 id="level"></h2>
-    <p id="advice"></p>
-    <p id="symptoms-line"><strong>Symptoms detected:</strong> <span id="symptoms"></span></p>
-    <div id="safety-note"></div>
-    <div id="contacts"></div>
-  </div>
-  <div id="disclaimer"></div>
+  <a class="skip-link" href="#main" data-i18n="skip_link">Skip to content</a>
 
-  <script>
-    const API_URL = "http://127.0.0.1:8000/triage";
-    const btn = document.getElementById("submitBtn");
-    const messageEl = document.getElementById("message");
-    const resultEl = document.getElementById("result");
-    const errorEl = document.getElementById("error");
+  <header class="site-header">
+    <div class="shell site-header__inner">
+      <div class="brand">
+        <span class="brand__mark" aria-hidden="true">✚</span>
+        <div>
+          <h1 class="brand__name">Smart Healthcare Triage</h1>
+          <p class="brand__tagline" data-i18n="tagline">
+            Describe how you feel. Find out how urgently to act.
+          </p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <label class="visually-hidden" for="language" data-i18n="language_label">Language</label>
+        <select id="language" class="language-select"></select>
+        <!-- Always reachable, on every tab, without scrolling. In a triage app
+             the emergency number must never be something you go looking for. -->
+        <a class="btn btn--emergency" href="tel:112">
+          <span aria-hidden="true">☎</span>
+          <span data-i18n="emergency_button">Emergency 112</span>
+        </a>
+      </div>
+    </div>
+  </header>
 
-    btn.addEventListener("click", async () => {
-      const message = messageEl.value.trim();
-      if (!message) return;
+  <nav class="tabs shell" aria-label="Sections">
+    <button class="tab is-active" role="tab" aria-selected="true" aria-controls="panel-check" id="tab-check"
+            data-i18n="tab_check">Check symptoms</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-guide" id="tab-guide"
+            data-i18n="tab_guide">Symptom guide</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-doctors" id="tab-doctors"
+            data-i18n="tab_doctors">Find a doctor</button>
+  </nav>
 
-      btn.disabled = true;
-      btn.textContent = "Checking...";
-      errorEl.style.display = "none";
-      resultEl.style.display = "none";
-      document.getElementById("disclaimer").style.display = "none";
+  <main id="main" class="shell">
 
-      try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message }),
-        });
+    <!-- ------------------------------------------------ symptom checker -->
+    <section id="panel-check" class="panel is-active" role="tabpanel" aria-labelledby="tab-check">
+      <div class="card card--input">
+        <label class="field-label" for="message" data-i18n="field_what_wrong">What is wrong?</label>
+        <p class="field-hint" data-i18n="field_hint_write">
+          Write it in your own words — whole sentences are fine.
+        </p>
+        <textarea id="message" rows="4" aria-describedby="examples-hint"
+                  data-i18n-placeholder="placeholder_message"></textarea>
 
-        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        <p id="examples-hint" class="field-hint" data-i18n="examples_hint">Or start from an example:</p>
+        <div class="examples" id="examples"></div>
 
-        const data = await res.json();
+        <!-- Optional on purpose. These two answers change the result more than
+             any extra symptom would, but a frightened person must never be
+             blocked by a form standing between them and an emergency number. -->
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label" for="age">
+              <span data-i18n="field_age">Age</span>
+              <span class="optional" data-i18n="optional">optional</span>
+            </label>
+            <input type="number" id="age" min="0" max="120" inputmode="numeric" placeholder="34">
+            <p class="field-hint" data-i18n="hint_age">
+              Babies and older adults are assessed differently.
+            </p>
+          </div>
+          <div class="field">
+            <label class="field-label" for="duration">
+              <span data-i18n="field_duration">How long</span>
+              <span class="optional" data-i18n="optional">optional</span>
+            </label>
+            <select id="duration"></select>
+            <p class="field-hint" data-i18n="hint_duration">How long it has been going on.</p>
+          </div>
+        </div>
 
-        resultEl.className = data.urgency_level;
-        document.getElementById("level").textContent = data.urgency_level.replace("_", " ");
-        document.getElementById("advice").textContent = data.message;
-        document.getElementById("symptoms").textContent =
-          data.symptoms_detected.length ? data.symptoms_detected.join(", ") : "none";
+        <div class="card__actions">
+          <button id="submit" class="btn btn--primary" data-i18n="btn_check">Check symptoms</button>
+          <button id="clear" class="btn btn--ghost" type="button" data-i18n="btn_clear">Clear</button>
+        </div>
+      </div>
 
-        // A crisis result is not a symptom analysis — hide the symptom line
-        // rather than showing "Symptoms detected: none" under it.
-        document.getElementById("symptoms-line").style.display =
-          data.urgency_level === "crisis" ? "none" : "block";
+      <div id="error" class="notice notice--error" role="alert" hidden></div>
 
-        const noteEl = document.getElementById("safety-note");
-        noteEl.textContent = data.safety_note || "";
-        noteEl.style.display = data.safety_note ? "block" : "none";
+      <!-- aria-live so a screen reader announces the verdict when it arrives. -->
+      <div id="result" class="result" role="status" aria-live="polite" hidden>
+        <div class="result__header">
+          <span id="result-badge" class="level-badge"></span>
+          <p id="result-message" class="result__message"></p>
+        </div>
 
-        // Build contacts as tel: links so they're one tap on a phone.
-        const contactsEl = document.getElementById("contacts");
-        contactsEl.textContent = "";
-        if (data.contacts && data.contacts.length) {
-          const heading = document.createElement("h3");
-          heading.textContent = "Who to contact";
-          contactsEl.appendChild(heading);
+        <p id="result-reason" class="result__reason" hidden></p>
+        <p id="result-safety" class="notice notice--warning" hidden></p>
+        <!-- Why age or duration changed the answer. Shown separately from the
+             rule reason so it is obvious which extra fact mattered. -->
+        <ul id="result-context" class="context-notes" hidden></ul>
 
-          for (const c of data.contacts) {
-            const wrap = document.createElement("div");
-            wrap.className = "contact";
+        <section id="symptoms-section" class="result__block">
+          <h2 class="result__heading" data-i18n="result_understood">What we understood</h2>
+          <ul id="symptoms-list" class="symptom-list"></ul>
+          <p id="symptoms-empty" class="muted" data-i18n="no_symptoms_recognised" hidden></p>
+        </section>
 
-            const name = document.createElement("div");
-            name.className = "cname";
-            name.textContent = c.name;
+        <section class="result__block">
+          <h2 class="result__heading" data-i18n="result_contacts">Who to contact now</h2>
+          <div id="contacts" class="contact-grid"></div>
+        </section>
 
-            const link = document.createElement("a");
-            // Strip spaces and any "/" alternative so tel: dials the first number.
-            link.href = "tel:" + c.number.split("/")[0].replace(/\s/g, "");
-            link.textContent = c.number;
+        <section id="specialties-section" class="result__block">
+          <h2 class="result__heading" data-i18n="result_doctor">Which kind of doctor</h2>
+          <div id="specialties" class="specialty-grid"></div>
+        </section>
 
-            const note = document.createElement("div");
-            note.className = "cnote";
-            note.textContent = c.note;
+        <!-- Doctors for the recommended speciality, right in the result, so the
+             answer to "who do I call" is not another click away. -->
+        <section id="result-doctors-section" class="result__block" hidden>
+          <div class="result__heading-row">
+            <h2 class="result__heading" data-i18n="result_doctors">Doctors you can contact</h2>
+            <button class="btn btn--ghost btn--small no-print" id="find-near-me" type="button"
+                    data-i18n="btn_find_near_me">📍 Find nearest</button>
+          </div>
+          <p id="location-note" class="muted small" hidden></p>
+          <div id="result-doctors" class="doctor-grid doctor-grid--compact"></div>
+          <button class="btn btn--ghost no-print" id="see-all-doctors" type="button"
+                  data-i18n="btn_see_all_doctors">See all doctors →</button>
+        </section>
 
-            wrap.append(name, link, note);
-            contactsEl.appendChild(wrap);
-          }
-        }
+        <div class="result__actions no-print">
+          <button class="btn btn--ghost" id="jump-to-doctors" type="button"
+                  data-i18n="btn_see_doctors">See doctors for this →</button>
+          <button class="btn btn--ghost" id="print-result" type="button"
+                  data-i18n="btn_print">🖨 Save or print</button>
+        </div>
 
-        const disclaimerEl = document.getElementById("disclaimer");
-        disclaimerEl.textContent = data.disclaimer || "";
-        disclaimerEl.style.display = data.disclaimer ? "block" : "none";
+        <p class="print-only print-footnote" id="print-stamp"></p>
+      </div>
+    </section>
 
-        resultEl.style.display = "block";
-      } catch (err) {
-        errorEl.textContent = "Could not reach the triage server. Is it running at " + API_URL + "?";
-        errorEl.style.display = "block";
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Check Symptoms";
-      }
-    });
-  </script>
+    <!-- -------------------------------------------------- symptom guide -->
+    <section id="panel-guide" class="panel" role="tabpanel" aria-labelledby="tab-guide" hidden>
+      <div class="section-intro">
+        <h2 data-i18n="guide_title">What this app can recognise</h2>
+        <p data-i18n="guide_intro">Everything below is understood by name.</p>
+      </div>
+
+      <div class="toolbar">
+        <label class="visually-hidden" for="symptom-search" data-i18n="search_placeholder">Search symptoms</label>
+        <input type="search" id="symptom-search" class="search-input"
+               data-i18n-placeholder="search_placeholder">
+        <span id="symptom-count" class="muted"></span>
+      </div>
+
+      <div id="symptom-groups" class="system-grid"></div>
+      <p id="symptom-no-results" class="muted" data-i18n="no_search_results" hidden></p>
+    </section>
+
+    <!-- ------------------------------------------------ doctor directory -->
+    <section id="panel-doctors" class="panel" role="tabpanel" aria-labelledby="tab-doctors" hidden>
+      <div class="section-intro">
+        <h2 data-i18n="doctors_title">Find a doctor</h2>
+        <p data-i18n="doctors_intro">Contact details for each speciality.</p>
+      </div>
+
+      <div id="placeholder-banner" class="notice notice--warning" hidden>
+        <strong data-i18n="placeholder_warning_title"></strong>
+        <span data-i18n="placeholder_warning_body"></span>
+      </div>
+
+      <div class="toolbar toolbar--wrap">
+        <div id="specialty-filters" class="filter-chips" role="group" aria-label="Filter by speciality"></div>
+        <button class="btn btn--ghost btn--small" id="find-near-me-directory" type="button"
+                data-i18n="btn_find_near_me">📍 Find nearest</button>
+      </div>
+
+      <div id="doctor-grid" class="doctor-grid"></div>
+      <p id="doctor-empty" class="muted" data-i18n="no_doctors" hidden></p>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p id="disclaimer" class="disclaimer"></p>
+      <p class="muted small" data-i18n="footer_note"></p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
 </body>
 </html>

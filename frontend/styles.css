@@ -1,0 +1,881 @@
+/* Smart Healthcare Triage — design system and layout.
+ *
+ * Plain CSS with custom properties, no build step and no CDN, so the page works
+ * offline and cannot break five minutes before a demo.
+ *
+ * Colour rules specific to this app:
+ *   - Urgency colours are the only strong colours on the page. If everything is
+ *     coloured, the red on an emergency result stops meaning anything.
+ *   - Every urgency level is distinguished by its label and icon as well as its
+ *     colour, because roughly 1 in 12 men cannot reliably tell red from green.
+ */
+
+/* ------------------------------------------------------------------ tokens */
+:root {
+  color-scheme: light dark;
+
+  /* Neutrals */
+  --bg: #f6f8fb;
+  --bg-raised: #ffffff;
+  --bg-sunken: #eef1f6;
+  --border: #dde3ec;
+  --border-strong: #c3ccda;
+  --text: #16202e;
+  --text-muted: #5b6879;
+
+  /* Brand */
+  --brand: #0f6fdd;
+  --brand-strong: #0a55ac;
+  --brand-tint: #e7f1fd;
+
+  /* Urgency */
+  --emergency: #c0261f;
+  --emergency-tint: #fdeceb;
+  --urgent: #a85a06;
+  --urgent-tint: #fdf1e2;
+  --routine: #1a7340;
+  --routine-tint: #e8f6ee;
+  --unknown: #55617a;
+  --unknown-tint: #eef0f5;
+  --crisis: #6d3bd1;
+  --crisis-tint: #f1ebfd;
+
+  /* Spacing scale */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow: 0 1px 2px rgba(16, 26, 40, .06), 0 4px 16px rgba(16, 26, 40, .06);
+  --shadow-lift: 0 2px 6px rgba(16, 26, 40, .09), 0 12px 28px rgba(16, 26, 40, .10);
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --shell: 1080px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f151d;
+    --bg-raised: #161e28;
+    --bg-sunken: #1c2632;
+    --border: #2a3644;
+    --border-strong: #3a4859;
+    --text: #e8edf4;
+    --text-muted: #9aa8ba;
+
+    --brand: #58a6ff;
+    --brand-strong: #7cbaff;
+    --brand-tint: #16273c;
+
+    --emergency: #ff7b72;
+    --emergency-tint: #351b1c;
+    --urgent: #e3a343;
+    --urgent-tint: #33261247;
+    --routine: #56d38a;
+    --routine-tint: #142c1f;
+    --unknown: #a3aec1;
+    --unknown-tint: #1f2733;
+    --crisis: #b18cff;
+    --crisis-tint: #241a3a;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 16px rgba(0, 0, 0, .3);
+    --shadow-lift: 0 2px 6px rgba(0, 0, 0, .45), 0 12px 28px rgba(0, 0, 0, .38);
+  }
+}
+
+/* ------------------------------------------------------------------- base */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { line-height: 1.25; margin: 0; }
+
+.shell {
+  width: 100%;
+  max-width: var(--shell);
+  margin-inline: auto;
+  padding-inline: var(--s4);
+}
+
+.muted { color: var(--text-muted); }
+.small { font-size: .85rem; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  z-index: 10;
+  padding: var(--s3) var(--s4);
+  background: var(--brand);
+  color: #fff;
+  border-radius: 0 0 var(--radius) 0;
+}
+.skip-link:focus { left: 0; }
+
+/* Single visible focus treatment everywhere, so keyboard users are never lost. */
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ----------------------------------------------------------------- header */
+.site-header {
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  flex-wrap: wrap;
+  padding-block: var(--s4);
+}
+
+.brand { display: flex; align-items: center; gap: var(--s3); }
+
+.brand__mark {
+  display: grid;
+  place-items: center;
+  width: 40px; height: 40px;
+  flex: none;
+  background: var(--brand);
+  color: #fff;
+  border-radius: 11px;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.brand__name { font-size: 1.15rem; font-weight: 650; letter-spacing: -.01em; }
+.brand__tagline { margin: 2px 0 0; font-size: .85rem; color: var(--text-muted); }
+
+.header-actions { display: flex; align-items: center; gap: var(--s3); }
+
+.language-select {
+  width: auto;
+  font: inherit;
+  font-size: .9rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 8px var(--s3);
+  cursor: pointer;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.badge--prototype {
+  background: var(--bg-sunken);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* ------------------------------------------------------------------- tabs */
+.tabs {
+  display: flex;
+  gap: var(--s1);
+  margin-top: var(--s5);
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: var(--s3) var(--s4);
+  font: inherit;
+  font-weight: 550;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab:hover { color: var(--text); }
+
+.tab.is-active {
+  color: var(--brand);
+  border-bottom-color: var(--brand);
+}
+
+.panel { padding-block: var(--s5) var(--s7); }
+.panel[hidden] { display: none; }
+
+.section-intro { margin-bottom: var(--s5); }
+.section-intro h2 { font-size: 1.3rem; margin-bottom: var(--s2); }
+.section-intro p { margin: 0; color: var(--text-muted); max-width: 62ch; }
+
+/* ------------------------------------------------------------------ cards */
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--s5);
+  box-shadow: var(--shadow);
+}
+
+.field-label { display: block; font-weight: 600; margin-bottom: var(--s1); }
+.field-hint { margin: 0 0 var(--s3); font-size: .875rem; color: var(--text-muted); }
+
+textarea, .search-input {
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: var(--s3);
+}
+
+textarea { resize: vertical; min-height: 96px; }
+textarea:focus, .search-input:focus { border-color: var(--brand); }
+
+.examples { display: flex; flex-wrap: wrap; gap: var(--s2); margin-bottom: var(--s4); }
+
+/* Age and duration. Deliberately quiet — they are optional, and styling them
+   like required fields would make people think they must be filled in. */
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--s4);
+  margin-bottom: var(--s4);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--border);
+}
+
+.field .field-hint { margin: var(--s1) 0 0; font-size: .8rem; }
+
+.optional {
+  font-weight: 400;
+  font-size: .78rem;
+  color: var(--text-muted);
+  text-transform: lowercase;
+  letter-spacing: 0;
+}
+
+input[type="number"], select {
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: var(--s3);
+}
+
+input[type="number"]:focus, select:focus { border-color: var(--brand); }
+
+.example-chip {
+  appearance: none;
+  font: inherit;
+  font-size: .85rem;
+  background: var(--bg-sunken);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px var(--s3);
+  cursor: pointer;
+}
+
+.example-chip:hover { color: var(--text); border-color: var(--border-strong); }
+
+.card__actions { display: flex; gap: var(--s3); flex-wrap: wrap; }
+
+/* ---------------------------------------------------------------- buttons */
+.btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 10px var(--s5);
+  cursor: pointer;
+  transition: background-color .12s ease, border-color .12s ease;
+}
+
+.btn--primary { background: var(--brand); color: #fff; }
+.btn--primary:hover { background: var(--brand-strong); }
+.btn--primary:disabled { opacity: .6; cursor: default; }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+}
+.btn--ghost:hover { color: var(--text); background: var(--bg-sunken); }
+
+.btn--emergency {
+  background: var(--emergency);
+  color: #fff;
+  padding-inline: var(--s4);
+}
+.btn--emergency:hover { filter: brightness(.93); }
+
+@media (prefers-color-scheme: dark) {
+  .btn--primary, .btn--emergency { color: #0f151d; }
+}
+
+.btn--small { padding: 6px var(--s3); font-size: .85rem; }
+
+/* --------------------------------------------------------------- notices */
+.notice {
+  border-radius: var(--radius);
+  padding: var(--s3) var(--s4);
+  margin-block: var(--s4);
+  font-size: .9rem;
+  border: 1px solid;
+}
+
+.notice--error {
+  background: var(--emergency-tint);
+  border-color: var(--emergency);
+  color: var(--text);
+}
+
+.notice--warning {
+  background: var(--urgent-tint);
+  border-color: var(--urgent);
+  color: var(--text);
+}
+
+.notice code {
+  background: var(--bg-sunken);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: .85em;
+}
+
+/* ---------------------------------------------------------------- result */
+.result {
+  margin-top: var(--s5);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--level, var(--unknown));
+  border-radius: var(--radius-lg);
+  padding: var(--s5);
+  box-shadow: var(--shadow-lift);
+}
+
+.result[hidden] { display: none; }
+
+.result__header { display: flex; align-items: flex-start; gap: var(--s4); flex-wrap: wrap; }
+
+.level-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  flex: none;
+  background: var(--level-tint, var(--unknown-tint));
+  color: var(--level, var(--unknown));
+  border: 1px solid var(--level, var(--unknown));
+  border-radius: 999px;
+  padding: 5px var(--s4);
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.result__message { margin: 0; font-size: 1.05rem; font-weight: 550; flex: 1 1 260px; }
+
+.result__reason {
+  margin: var(--s4) 0 0;
+  padding-left: var(--s3);
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-muted);
+  font-size: .92rem;
+}
+
+/* Why age or duration changed the answer. An escalation nobody can account for
+   reads as a malfunction, so each one is listed explicitly. */
+.context-notes {
+  list-style: none;
+  margin: var(--s3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s2);
+}
+
+.context-notes li {
+  background: var(--brand-tint);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--brand);
+  border-radius: var(--radius);
+  padding: var(--s2) var(--s3);
+  font-size: .88rem;
+}
+
+.result__block { margin-top: var(--s5); }
+
+.result__actions {
+  display: flex;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--border);
+}
+
+.result__heading {
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  margin-bottom: var(--s3);
+}
+
+/* ------------------------------------------------------- symptom results */
+.symptom-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
+
+.symptom-item {
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s3) var(--s4);
+}
+
+.symptom-item__label { font-weight: 600; }
+.symptom-item__desc { font-size: .88rem; color: var(--text-muted); margin-top: 2px; }
+
+/* ------------------------------------------------------------- contacts */
+.contact-grid {
+  display: grid;
+  gap: var(--s3);
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.contact-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s4);
+}
+
+.contact-card__name { font-size: .85rem; color: var(--text-muted); }
+
+.contact-card__number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 2px solid var(--brand);
+  align-self: flex-start;
+}
+
+.contact-card__number:hover { color: var(--brand); }
+.contact-card__note { font-size: .82rem; color: var(--text-muted); }
+
+/* ----------------------------------------------------------- specialties */
+.specialty-grid {
+  display: grid;
+  gap: var(--s3);
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  margin-bottom: var(--s4);
+}
+
+.specialty-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  background: var(--brand-tint);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s3) var(--s4);
+}
+
+.specialty-card__icon { font-size: 1.5rem; line-height: 1; }
+.specialty-card__name { font-weight: 600; font-size: .95rem; }
+.specialty-card__focus { font-size: .82rem; color: var(--text-muted); }
+
+/* -------------------------------------------------------- symptom guide */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin-bottom: var(--s5);
+}
+
+.toolbar--wrap { flex-wrap: wrap; }
+.toolbar .search-input { max-width: 380px; }
+
+.system-grid {
+  display: grid;
+  gap: var(--s4);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-items: start;
+}
+
+.system-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--s4) var(--s5) var(--s5);
+  box-shadow: var(--shadow);
+}
+
+.system-card__title {
+  font-size: 1rem;
+  margin-bottom: var(--s3);
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--border);
+}
+
+.system-card__count { font-weight: 400; color: var(--text-muted); font-size: .85rem; }
+
+.symptom-entry { padding-block: var(--s2); border-bottom: 1px solid var(--border); }
+.symptom-entry:last-child { border-bottom: none; }
+.symptom-entry__label { font-weight: 550; font-size: .95rem; }
+.symptom-entry__desc { font-size: .85rem; color: var(--text-muted); }
+
+/* A red-flag symptom is marked with a word, not only a colour. */
+.flag {
+  display: inline-block;
+  margin-left: var(--s2);
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  background: var(--emergency-tint);
+  color: var(--emergency);
+  border: 1px solid var(--emergency);
+}
+
+/* ------------------------------------------------------ doctor directory */
+.filter-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
+
+.filter-chip {
+  appearance: none;
+  font: inherit;
+  font-size: .875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-raised);
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 6px var(--s3);
+  cursor: pointer;
+}
+
+.filter-chip:hover { color: var(--text); }
+
+.filter-chip.is-active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .filter-chip.is-active { color: #0f151d; }
+}
+
+.filter-chip__count { opacity: .7; font-variant-numeric: tabular-nums; }
+
+.doctor-grid {
+  display: grid;
+  gap: var(--s4);
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+}
+
+.doctor-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--s5);
+  box-shadow: var(--shadow);
+}
+
+.doctor-card__top { display: flex; gap: var(--s4); align-items: flex-start; }
+
+/* Initials avatar. A missing photo should look deliberate, not broken — and it
+   avoids shipping pictures of people who never agreed to appear here. */
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 56px; height: 56px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: .02em;
+  color: #fff;
+  background: var(--avatar-bg, var(--brand));
+}
+
+.doctor-card__name { font-size: 1.05rem; font-weight: 650; }
+.doctor-card__qual { font-size: .85rem; color: var(--text-muted); }
+
+.doctor-card__specialty {
+  display: inline-block;
+  margin-top: var(--s2);
+  font-size: .75rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--brand);
+}
+
+.doctor-card__meta {
+  list-style: none;
+  margin: var(--s4) 0 0;
+  padding: var(--s4) 0 0;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: var(--s2);
+  font-size: .875rem;
+}
+
+.doctor-card__meta li { display: flex; gap: var(--s2); }
+.doctor-card__meta .k { color: var(--text-muted); flex: none; min-width: 74px; }
+
+.doctor-card__actions {
+  display: flex;
+  gap: var(--s2);
+  flex-wrap: wrap;
+  margin-top: var(--s4);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--border);
+}
+
+.doctor-card--placeholder { border-style: dashed; }
+
+/* Open/closed and distance. Both use a word, not only a colour — a green dot
+   alone tells a colour-blind user nothing, and "is it open" is exactly the
+   question they came to answer. */
+.doctor-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: var(--s3);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 650;
+  border: 1px solid;
+}
+
+.status-badge::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-badge--open {
+  background: var(--routine-tint);
+  color: var(--routine);
+  border-color: var(--routine);
+}
+
+.status-badge--closed {
+  background: var(--bg-sunken);
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+}
+
+.badge-detail { font-size: .78rem; color: var(--text-muted); }
+
+.distance-badge {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  background: var(--brand-tint);
+  color: var(--brand);
+  border: 1px solid var(--brand);
+}
+
+/* The shortlist inside a result is denser than the full directory — it sits
+   under an answer the user is still reading, not on a page of its own. */
+.doctor-grid--compact { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
+.doctor-grid--compact .doctor-card { padding: var(--s4); }
+.doctor-grid--compact .avatar { width: 44px; height: 44px; font-size: .95rem; }
+.doctor-grid--compact .doctor-card__meta { gap: var(--s1); font-size: .82rem; }
+
+.result__heading-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+
+#result-doctors { margin-bottom: var(--s3); }
+
+.placeholder-tag {
+  display: inline-block;
+  margin-bottom: var(--s3);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  background: var(--urgent-tint);
+  color: var(--urgent);
+  border: 1px solid var(--urgent);
+}
+
+/* ----------------------------------------------------------------- footer */
+.site-footer {
+  border-top: 1px solid var(--border);
+  background: var(--bg-raised);
+  padding-block: var(--s5);
+  margin-top: var(--s6);
+}
+
+.disclaimer {
+  margin: 0 0 var(--s2);
+  padding-left: var(--s3);
+  border-left: 3px solid var(--border-strong);
+  font-size: .875rem;
+  color: var(--text-muted);
+}
+
+.site-footer .muted { margin: 0; max-width: 78ch; }
+
+/* ------------------------------------------------------------- responsive */
+@media (max-width: 640px) {
+  .site-header__inner { align-items: flex-start; }
+  .brand__tagline { display: none; }
+  .tabs { overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .card, .result, .doctor-card, .system-card { padding: var(--s4); }
+  .card__actions .btn { flex: 1 1 auto; }
+  .result__message { font-size: 1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+
+/* ------------------------------------------------------------------ print */
+/* The point of printing is to hand the result to an actual doctor, so the print
+   view keeps the findings and the reasoning and drops everything interactive.
+   Colours are forced to black on white: urgency tints that look right on screen
+   print as unreadable grey, and a triage summary nobody can read is worse than
+   none. The urgency level survives as text, which is what matters on paper. */
+.print-only { display: none; }
+
+@media print {
+  @page { margin: 16mm; }
+
+  .no-print,
+  .site-header,
+  .tabs,
+  .site-footer .muted,
+  .card--input,
+  #panel-guide,
+  #panel-doctors,
+  .skip-link,
+  #error { display: none !important; }
+
+  .print-only { display: block; }
+
+  body {
+    background: #fff;
+    color: #000;
+    font-size: 11pt;
+  }
+
+  .shell { max-width: none; padding: 0; }
+  .panel { padding: 0; }
+
+  .result {
+    box-shadow: none;
+    border: 1px solid #000;
+    border-left-width: 1px;
+    border-radius: 0;
+    padding: 12pt;
+    margin: 0;
+  }
+
+  .level-badge {
+    background: #fff;
+    color: #000;
+    border: 1.5pt solid #000;
+  }
+
+  .symptom-item,
+  .contact-card,
+  .specialty-card,
+  .context-notes li,
+  .notice {
+    background: #fff;
+    border: 1px solid #666;
+  }
+
+  .contact-card__number { color: #000; border-bottom: 1pt solid #000; }
+  .result__heading { color: #000; }
+  .muted, .symptom-item__desc, .contact-card__note { color: #333; }
+
+  /* Keep each block whole rather than split across a page break. */
+  .result__block, .symptom-item, .contact-card, .doctor-card {
+    break-inside: avoid;
+  }
+
+  .print-footnote {
+    margin-top: 12pt;
+    padding-top: 6pt;
+    border-top: 1px solid #666;
+    font-size: 9pt;
+    color: #333;
+  }
+}
