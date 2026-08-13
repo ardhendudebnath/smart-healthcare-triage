@@ -5,10 +5,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+import audit
 import context as patient_context
 import doctors as doctor_directory
 import hours
 import i18n
+import version
 import specialties as specialty_routing
 import symptoms as symptom_data
 from nlp_utils import extract_symptoms
@@ -150,7 +152,21 @@ def triage(request: TriageRequest):
     #    they want to hurt themselves needs a counsellor now, and should not
     #    have that buried under a symptom analysis.
     if check_crisis(text):
+        # Audited, but with the text withheld. Knowing the crisis path fired,
+        # and when, is what safety review needs; keeping a verbatim record of
+        # someone disclosing that they want to hurt themselves is a different
+        # and much heavier thing to hold. The placeholder keeps the row
+        # countable without storing the disclosure itself.
+        event_id = audit.record(
+            input_text="[redacted: crisis disclosure]",
+            lang=lang,
+            symptoms=[],
+            extraction_source="safety_override",
+            urgency_level="crisis",
+            versions=version.stamp(),
+        )
         return {
+            "event_id": event_id,
             "symptoms_detected": [],
             "symptom_details": [],
             "urgency_level": "crisis",
@@ -162,6 +178,7 @@ def triage(request: TriageRequest):
             "disclaimer": i18n.simple("disclaimer", lang, DISCLAIMER),
             "safety_note": None,
             "context_notes": [],
+            "versions": version.stamp(),
             "lang": lang,
         }
 
@@ -224,7 +241,31 @@ def triage(request: TriageRequest):
         # seen today" underneath "go now". The context note explains it instead.
         reason = ""
 
+    rendered_notes = _context_notes(context_notes, lang)
+
+    # 6. Record the decision before returning it. Written after every layer has
+    #    run so the row reflects what the patient was actually told, and stamped
+    #    with the ruleset and vocabulary versions that decided it — without
+    #    those, a row says what happened but not what would happen again.
+    event_id = audit.record(
+        input_text=text,
+        lang=lang,
+        symptoms=symptoms,
+        extraction_source=source,
+        urgency_level=level,
+        versions=version.stamp(),
+        level_before_context=level_before_context,
+        safety_note=safety_note,
+        context_notes=rendered_notes,
+        age=age,
+        duration=duration,
+    )
+
     return {
+        # Lets a patient quote one number to a clinician, and a reviewer pull the
+        # full decision back out of the audit trail. None when the write failed,
+        # which never blocks the result.
+        "event_id": event_id,
         "symptoms_detected": symptoms,
         # Labels and plain-language descriptions, so the UI never has to show a
         # raw identifier like "one_sided_weakness" to a frightened person.
@@ -237,9 +278,96 @@ def triage(request: TriageRequest):
         "recommended_specialties": _specialties(symptoms, level, lang),
         "disclaimer": i18n.simple("disclaimer", lang, DISCLAIMER),
         "safety_note": safety_note,
-        "context_notes": _context_notes(context_notes, lang),
+        "context_notes": rendered_notes,
+        "versions": version.stamp(),
         "lang": lang,
     }
+
+
+@app.get("/version")
+def app_version():
+    """Which application, ruleset and vocabulary are currently serving.
+
+    The first thing to ask when a result looks wrong, and the first thing to
+    quote when reporting one.
+    """
+    return version.describe()
+
+
+@app.get("/triage/{event_id}/summary")
+def clinical_summary(event_id: str, lang: Optional[str] = None):
+    """A structured handoff for the clinician who sees the patient next.
+
+    A patient arriving at an OPD with "an app told me to come in" gives the
+    doctor nothing to work with. This gives them the sentence the patient
+    actually wrote, which symptoms were read out of it, what graded the result,
+    and — stated plainly — that a machine produced it and it is not a diagnosis.
+
+    Deliberately assembled from the audit record rather than re-run. Re-running
+    would grade the text against today's rules, which is the wrong question: the
+    clinician is asking what the patient was told, not what they would be told
+    now.
+    """
+    event = audit.get(event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="No such triage event.")
+
+    chosen = i18n.normalise(lang or event["lang"])
+    symptoms = event["symptoms"]
+
+    return {
+        "event_id": event["id"],
+        "recorded_at": event["created_at"],
+        "reported": {
+            "in_the_patient_s_words": event["input_text"],
+            "language": event["lang"],
+            "age_band": event["age_band"],
+            "duration": event["duration"],
+        },
+        "understood": {
+            "symptoms": _symptom_details(symptoms, chosen),
+            "symptom_ids": symptoms,
+            "nothing_recognised": not event["recognised"],
+            "read_by": event["extraction_source"],
+        },
+        "assessed": {
+            "urgency_level": event["urgency_level"],
+            "before_age_and_duration": event["level_before_context"],
+            "safety_note": event["safety_note"],
+            "context_notes": event["context_notes"],
+        },
+        "provenance": {
+            "app_version": event["app_version"],
+            "ruleset_version": event["ruleset_version"],
+            "vocabulary_version": event["vocabulary_version"],
+            "rules_current": event["ruleset_version"] == version.RULESET_VERSION,
+        },
+        "disclaimer": i18n.simple("disclaimer", chosen, DISCLAIMER),
+        "provenance_note": (
+            "Machine-generated by an automated triage prototype. Not a "
+            "diagnosis and not clinically reviewed. The urgency grade above "
+            "was produced by the ruleset named in provenance; if "
+            "rules_current is false, the rules have changed since."
+        ),
+    }
+
+
+@app.get("/audit/stats")
+def audit_statistics():
+    """Aggregate counts over the audit trail. No free text, no individuals."""
+    return audit.statistics()
+
+
+@app.get("/audit/unrecognised")
+def audit_unrecognised(limit: int = 100):
+    """Inputs the vocabulary could not read, newest first.
+
+    The working list for improving the app: every entry is a real description
+    of a real problem that the 79-symptom vocabulary does not yet cover.
+    """
+    limit = max(1, min(limit, 1000))
+    entries = audit.unrecognised(limit)
+    return {"count": len(entries), "entries": entries}
 
 
 @app.get("/languages")

@@ -9,3 +9,10 @@ __pycache__/
 
 # Real doctor contact details. doctors.example.json is the safe template.
 doctors.json
+
+# The audit trail holds free text about people's health. It is health data:
+# keep it off an encrypted disk at your peril, and never in version control.
+# -wal and -shm are SQLite's write-ahead log sidecars, created automatically.
+audit.db
+audit.db-wal
+audit.db-shm

@@ -1,0 +1,38 @@
+{
+  "name": "Smart Healthcare Triage",
+  "short_name": "Triage",
+  "description": "Describe how you feel. Find out how urgently to act. Works offline.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#0e7c7b",
+  "categories": ["health", "medical"],
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%230e7c7b'/%3E%3Cpath d='M232 104h48v104h104v48H280v104h-48V256H128v-48h104z' fill='white'/%3E%3C/svg%3E",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230e7c7b'/%3E%3Cpath d='M232 124h48v96h96v48h-96v96h-48v-96h-96v-48h96z' fill='white'/%3E%3C/svg%3E",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Check symptoms",
+      "url": "./index.html#panel-check"
+    },
+    {
+      "name": "Find a doctor",
+      "url": "./index.html#panel-doctors"
+    }
+  ]
+}

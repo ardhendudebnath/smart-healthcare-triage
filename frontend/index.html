@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Smart Healthcare Triage</title>
 <link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e7c7b">
 </head>
 <!--
   Text carries data-i18n="<key>" and is filled in from the backend at load, so
@@ -14,6 +16,15 @@
 -->
 <body>
   <a class="skip-link" href="#main" data-i18n="skip_link">Skip to content</a>
+
+  <!-- Shown only when the browser reports no connection. role="status" rather
+       than "alert": being offline is a state worth announcing once, not an
+       interruption to repeat. Hidden by default so it never flashes on a
+       healthy load. -->
+  <div id="offline-banner" class="offline-banner" role="status" hidden>
+    <span aria-hidden="true">⚠</span>
+    <span data-i18n="offline_banner">Offline — showing saved information. 112 still works.</span>
+  </div>
 
   <header class="site-header">
     <div class="shell site-header__inner">

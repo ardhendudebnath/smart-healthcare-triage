@@ -455,7 +455,15 @@ async function submitTriage() {
   } catch (err) {
     // The emergency number in the header still works with the server down, and
     // that matters more than the error text.
-    $("error").textContent = t("error_server");
+    //
+    // Offline is called out separately from a server error because the two need
+    // different things from the person reading them: a server error is ours to
+    // fix and worth retrying, while being offline is theirs to act on and may
+    // not resolve where they are standing. Both say the same thing about
+    // urgency — a cached or absent answer is never a reason to wait.
+    $("error").textContent = navigator.onLine
+      ? t("error_server")
+      : t("error_offline");
     show($("error"), true);
   } finally {
     button.disabled = false;
@@ -742,6 +750,49 @@ function renderResultDoctors() {
     filterDoctors(specialtyId);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+}
+
+/* ---------------------------------------------------------------------------
+ * Offline support
+ *
+ * The service worker caches the shell, the symptom vocabulary and the doctor
+ * directory, so the app opens and stays useful with no signal. Triage itself is
+ * never cached — see sw.js for why serving a stale grade would be the most
+ * dangerous thing this app could do.
+ * ------------------------------------------------------------------------- */
+
+function updateOfflineBanner() {
+  show($("offline-banner"), !navigator.onLine);
+}
+
+window.addEventListener("online", updateOfflineBanner);
+window.addEventListener("offline", updateOfflineBanner);
+updateOfflineBanner();
+
+function registerServiceWorker() {
+  navigator.serviceWorker.register("sw.js").catch((error) => {
+    // A failed registration costs offline support and nothing else, so it is
+    // logged rather than surfaced. The app works exactly as it did before, and
+    // telling a worried person about a caching failure would be noise.
+    console.warn("Offline support unavailable:", error);
+  });
+}
+
+if ("serviceWorker" in navigator) {
+  // Deferred until load so caching the shell never competes with the first
+  // render — someone opening this app is usually in a hurry.
+  //
+  // The readyState check is not defensive padding: if the document has already
+  // finished loading, "load" will never fire again, and a listener added now
+  // would sit there forever while offline support silently never switched on.
+  // A feature whose entire purpose is working when things go wrong must not
+  // itself fail quietly, and this fires on a warm cache in a real browser, not
+  // only in test harnesses.
+  if (document.readyState === "complete") {
+    registerServiceWorker();
+  } else {
+    window.addEventListener("load", registerServiceWorker);
+  }
 }
 
 function filterDoctors(specialtyId) {

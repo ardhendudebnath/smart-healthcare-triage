@@ -171,6 +171,12 @@ UI_EN: Dict[str, str] = {
         "Could not reach the triage server. If this is an emergency, call 112 "
         "now rather than waiting."
     ),
+    "error_offline": (
+        "You are offline, so symptoms cannot be checked right now. The symptom "
+        "guide and doctor list below still work. If this is an emergency, call "
+        "112 now rather than waiting."
+    ),
+    "offline_banner": "Offline — showing saved information. 112 still works.",
     "error_directory": "Could not load the directory — is the server running?",
     "error_symptoms": "Could not load the symptom list — is the server running?",
     "footer_note": (
