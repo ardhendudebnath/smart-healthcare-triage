@@ -31,16 +31,19 @@
 /* Bump to invalidate every cache. Old caches are deleted on activate, so a
  * stale shell cannot survive a deploy — a real hazard when the thing being
  * updated is medical guidance. */
-const CACHE_VERSION = "triage-v1";
+const CACHE_VERSION = "triage-v2";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const DATA_CACHE = `${CACHE_VERSION}-data`;
 
 /* Everything needed to render the app with no network at all. */
+/* The ?v= values must match index.html exactly. The browser requests
+ * "app.js?v=2", so precaching a bare "app.js" would store a URL nothing ever
+ * asks for: the cache would look full and every request would still miss. */
 const SHELL_ASSETS = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./app.js",
+  "./styles.css?v=2",
+  "./app.js?v=2",
   "./manifest.json",
 ];
 

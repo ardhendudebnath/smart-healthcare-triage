@@ -398,6 +398,7 @@ function renderResult(data) {
 
   renderContacts(data.contacts);
   renderSpecialties(data.recommended_specialties);
+  renderFollowUp(data.follow_up_questions);
 
   // A crisis result must not turn into a directory browse. The person needs the
   // counselling number in front of them, not a shortlist to pick from.
@@ -753,6 +754,108 @@ function renderResultDoctors() {
 }
 
 /* ---------------------------------------------------------------------------
+ * Follow-up questions
+ *
+ * Two or three questions that could change the grade, asked after the verdict
+ * rather than before it. The backend sends none for an emergency — someone
+ * being told to call an ambulance should not meet a questionnaire — so an empty
+ * list here simply hides the block.
+ * ------------------------------------------------------------------------- */
+
+function renderFollowUp(questions) {
+  const section = $("followup-section");
+  const container = $("followup-questions");
+  container.textContent = "";
+
+  if (!questions || !questions.length) {
+    show(section, false);
+    return;
+  }
+
+  questions.forEach((question) => {
+    // A fieldset/legend pair rather than a heading plus loose radios, so a
+    // screen reader reads the question with each option instead of announcing
+    // three unlabelled buttons.
+    const group = el("fieldset", "followup__group");
+    group.appendChild(el("legend", "followup__question", question.question));
+
+    const options = el("div", "followup__options");
+    question.answers.forEach((answer) => {
+      const id = `fu-${question.id}-${answer.id}`;
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = question.id;
+      input.value = answer.id;
+      input.id = id;
+      input.className = "followup__radio";
+
+      const label = el("label", "followup__label", answer.label);
+      label.setAttribute("for", id);
+
+      options.appendChild(input);
+      options.appendChild(label);
+    });
+
+    group.appendChild(options);
+    container.appendChild(group);
+  });
+
+  show(section, true);
+}
+
+function collectAnswers() {
+  const answers = {};
+  $("followup-questions")
+    .querySelectorAll("input[type=radio]:checked")
+    .forEach((input) => {
+      answers[input.name] = input.value;
+    });
+  return answers;
+}
+
+async function submitFollowUp() {
+  // The id of the result being refined. Without it the backend has nothing to
+  // re-grade, so the block is simply hidden rather than sending a broken call.
+  const eventId = lastResult && lastResult.event_id;
+  if (!eventId) {
+    show($("followup-section"), false);
+    return;
+  }
+
+  const answers = collectAnswers();
+  if (!Object.keys(answers).length) {
+    show($("followup-section"), false);
+    return;
+  }
+
+  const button = $("followup-submit");
+  button.disabled = true;
+
+  try {
+    const response = await fetch(`${API}/triage/${eventId}/followup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answers, lang: currentLang }),
+    });
+    if (!response.ok) throw new Error(`Server returned ${response.status}`);
+    renderResult(await response.json());
+    $("result").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    $("error").textContent = navigator.onLine
+      ? t("error_server")
+      : t("error_offline");
+    show($("error"), true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+$("followup-submit").addEventListener("click", submitFollowUp);
+$("followup-skip").addEventListener("click", () => {
+  show($("followup-section"), false);
+});
+
+/* ---------------------------------------------------------------------------
  * Offline support
  *
  * The service worker caches the shell, the symptom vocabulary and the doctor
@@ -770,7 +873,13 @@ window.addEventListener("offline", updateOfflineBanner);
 updateOfflineBanner();
 
 function registerServiceWorker() {
-  navigator.serviceWorker.register("sw.js").catch((error) => {
+  // updateViaCache: "none" stops the browser serving sw.js from its own HTTP
+  // cache. Without it the worker can outlive several deploys — it is the file
+  // that decides what every other file is allowed to be, so a stale copy pins
+  // the whole app to an old version, including old triage rules. Observed here:
+  // a corrected worker registered as "active" while still running the previous
+  // script, which is exactly the silent staleness this app cannot afford.
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch((error) => {
     // A failed registration costs offline support and nothing else, so it is
     // logged rather than surfaced. The app works exactly as it did before, and
     // telling a worried person about a caching failure would be noise.

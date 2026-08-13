@@ -4,7 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Smart Healthcare Triage</title>
-<link rel="stylesheet" href="styles.css">
+<!-- ?v= is a cache buster, and it is load-bearing rather than cosmetic. Without
+     it a returning browser keeps serving the stylesheet and script it cached
+     last time, so a deploy that changes a triage rule reaches a user whose
+     browser is still running the old one. Bump this and CACHE_VERSION in sw.js
+     together on any change to these files. -->
+<link rel="stylesheet" href="styles.css?v=2">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0e7c7b">
 </head>
@@ -125,6 +130,24 @@
           <p id="symptoms-empty" class="muted" data-i18n="no_symptoms_recognised" hidden></p>
         </section>
 
+        <!-- The two or three questions that could change the answer. Placed
+             after the verdict, never before it: the result above is already a
+             real result, and someone who reads it and leaves has been triaged.
+             Hidden entirely for an emergency, where the backend sends none. -->
+        <section id="followup-section" class="result__block followup" hidden>
+          <h2 class="result__heading" data-i18n="fu_heading">A few more questions</h2>
+          <p class="muted" data-i18n="fu_intro">
+            Answering these can sharpen the result. They are optional — the advice above already stands.
+          </p>
+          <div id="followup-questions"></div>
+          <div class="card__actions">
+            <button id="followup-submit" class="btn btn--primary" type="button"
+                    data-i18n="fu_submit">Update my result</button>
+            <button id="followup-skip" class="btn btn--ghost" type="button"
+                    data-i18n="fu_skip">Skip</button>
+          </div>
+        </section>
+
         <section class="result__block">
           <h2 class="result__heading" data-i18n="result_contacts">Who to contact now</h2>
           <div id="contacts" class="contact-grid"></div>
@@ -209,6 +232,6 @@
     </div>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>

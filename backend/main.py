@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Dict, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +8,7 @@ from pydantic import BaseModel
 import audit
 import context as patient_context
 import doctors as doctor_directory
+import followup
 import hours
 import i18n
 import version
@@ -279,6 +280,101 @@ def triage(request: TriageRequest):
         "disclaimer": i18n.simple("disclaimer", lang, DISCLAIMER),
         "safety_note": safety_note,
         "context_notes": rendered_notes,
+        # Empty for an emergency or when nothing was recognised — see
+        # followup.questions_for. The result above stands with or without them.
+        "follow_up_questions": _render_questions(
+            followup.questions_for(symptoms, level), lang
+        ),
+        "versions": version.stamp(),
+        "lang": lang,
+    }
+
+
+def _render_questions(questions, lang):
+    """Turn question keys into sentences in the requested language."""
+    rendered = []
+    for question in questions:
+        rendered.append(
+            {
+                "id": question["id"],
+                "question": i18n.ui_string(question["question_key"], lang),
+                "answers": [
+                    {
+                        "id": answer["id"],
+                        "label": i18n.ui_string(answer["label_key"], lang),
+                    }
+                    for answer in question["answers"]
+                ],
+            }
+        )
+    return rendered
+
+
+class FollowUpRequest(BaseModel):
+    # {question_id: "yes" | "no" | "unsure"}. Unknown ids are ignored rather
+    # than rejected, so a client left open across a deploy still gets advice.
+    answers: Dict[str, str]
+    lang: Optional[str] = None
+
+
+@app.post("/triage/{event_id}/followup")
+def refine_triage(event_id: str, request: FollowUpRequest):
+    """Re-grade an earlier result with the follow-up answers folded in.
+
+    Works from the recorded event rather than asking the client to send the
+    symptoms back. A client that could restate its own symptoms could also
+    restate them wrongly, and the audit trail is the one copy nobody has had a
+    chance to edit.
+
+    The refinement is written as its own audit record rather than overwriting
+    the first. Both are true: the patient was told one thing, answered some
+    questions, and was then told another. An audit trail that kept only the
+    second would hide the escalation that is the whole point of asking.
+    """
+    event = audit.get(event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="No such triage event.")
+
+    lang = i18n.normalise(request.lang or event["lang"])
+    original_level = event["urgency_level"]
+
+    level, symptoms, note_keys = followup.apply(
+        original_level, event["symptoms"], request.answers
+    )
+
+    notes = [i18n.ui_string(key, lang) for key in note_keys]
+
+    refined_id = audit.record(
+        input_text=event["input_text"],
+        lang=lang,
+        symptoms=symptoms,
+        extraction_source="followup",
+        urgency_level=level,
+        versions=version.stamp(),
+        level_before_context=original_level,
+        context_notes=notes,
+        age=None,
+        duration=event["duration"],
+    )
+
+    return {
+        "event_id": refined_id,
+        "refined_from": event_id,
+        "changed": level != original_level,
+        "previous_level": original_level,
+        "symptoms_detected": symptoms,
+        "symptom_details": _symptom_details(symptoms, lang),
+        "urgency_level": level,
+        "message": i18n.message(level, lang, MESSAGES[level]),
+        "reason": "",
+        "extraction_source": "followup",
+        "contacts": _contacts(level, lang),
+        "recommended_specialties": _specialties(symptoms, level, lang),
+        "disclaimer": i18n.simple("disclaimer", lang, DISCLAIMER),
+        "safety_note": None,
+        "context_notes": notes,
+        # No second round. Two questions deep is a form, not triage.
+        "follow_up_questions": [],
         "versions": version.stamp(),
         "lang": lang,
     }

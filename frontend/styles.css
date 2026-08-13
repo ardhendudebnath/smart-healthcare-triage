@@ -402,6 +402,77 @@ input[type="number"]:focus, select:focus { border-color: var(--brand); }
 
 .offline-banner[hidden] { display: none; }
 
+/* ------------------------------------------------------- follow-up questions */
+/* Visually quieter than the verdict above it. These refine an answer that has
+   already been given, so they must not compete with it for attention. */
+.followup__group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s3) var(--s4);
+  margin: 0 0 var(--s3);
+  background: var(--bg-raised);
+}
+
+.followup__question {
+  font-weight: 600;
+  padding: 0 var(--s2);
+  font-size: .95rem;
+}
+
+.followup__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s2);
+}
+
+/* The radio itself is hidden but still focusable, so keyboard and screen-reader
+   users keep full native behaviour while the label becomes the visible target.
+   clip rather than display:none — a display:none radio is removed from the
+   accessibility tree and cannot be reached at all. */
+.followup__radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.followup__label {
+  display: inline-block;
+  padding: var(--s2) var(--s4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: .9rem;
+  background: var(--bg);
+  user-select: none;
+}
+
+.followup__label:hover { border-color: var(--brand); }
+
+.followup__radio:checked + .followup__label {
+  background: var(--brand-tint);
+  border-color: var(--brand);
+  color: var(--brand-strong);
+  font-weight: 600;
+}
+
+/* Focus lives on the hidden input, so the ring has to be drawn on the label. */
+.followup__radio:focus-visible + .followup__label {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@media print {
+  /* Unanswered questions on a printout handed to a doctor are just noise. */
+  .followup { display: none; }
+}
+
 /* ---------------------------------------------------------------- result */
 .result {
   margin-top: var(--s5);

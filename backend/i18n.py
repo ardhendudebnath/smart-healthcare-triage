@@ -177,6 +177,47 @@ UI_EN: Dict[str, str] = {
         "112 now rather than waiting."
     ),
     "offline_banner": "Offline — showing saved information. 112 still works.",
+    # follow-up questions
+    "fu_heading": "A few more questions",
+    "fu_intro": (
+        "Answering these can sharpen the result. They are optional — the "
+        "advice above already stands."
+    ),
+    "fu_submit": "Update my result",
+    "fu_skip": "Skip",
+    "fu_a_yes": "Yes",
+    "fu_a_no": "No",
+    "fu_a_unsure": "Not sure",
+    "fu_q_headache_sudden": (
+        "Did the headache reach its worst very suddenly, within a few seconds?"
+    ),
+    "fu_q_fever_rash": (
+        "Is there a rash that does not fade when you press a clear glass "
+        "firmly against it?"
+    ),
+    "fu_q_headache_neck": "Is your neck stiff, or painful to bend forward?",
+    "fu_q_breathless_at_rest": "Are you short of breath even while sitting still?",
+    "fu_q_fluids_down": "Have you been unable to keep any fluids down?",
+    "fu_q_abdominal_right_lower": (
+        "Is the pain worst in the lower right side of your abdomen?"
+    ),
+    "fu_note_headache_sudden": (
+        "Raised to emergency: a headache that peaks within seconds needs "
+        "immediate assessment."
+    ),
+    "fu_note_fever_rash": (
+        "Raised to emergency: a rash that does not fade under pressure needs "
+        "immediate assessment."
+    ),
+    "fu_note_headache_neck": "Neck stiffness added to the assessment.",
+    "fu_note_breathless": "Breathlessness at rest added to the assessment.",
+    "fu_note_fluids": (
+        "Raised: not keeping fluids down risks dehydration, which needs "
+        "same-day care."
+    ),
+    "fu_note_abdominal": (
+        "Raised: pain in the lower right abdomen should be seen the same day."
+    ),
     "error_directory": "Could not load the directory — is the server running?",
     "error_symptoms": "Could not load the symptom list — is the server running?",
     "footer_note": (
@@ -196,6 +237,27 @@ def ui(lang: str) -> Dict[str, str]:
     if table:
         strings.update({k: v for k, v in table.UI.items() if v})
     return strings
+
+
+def ui_string(key: str, lang: str) -> str:
+    """One interface string, for text the backend renders rather than ships.
+
+    Most UI strings go to the frontend in bulk via `ui()` and are substituted
+    there. Follow-up questions are the exception: they are chosen per result, so
+    the sentence is assembled here and arrives ready to display.
+
+    Separate from `simple()` because the two read different tables. `simple()`
+    looks in STRINGS (disclaimer, crisis message, safety notes); interface text
+    lives in UI. Calling the wrong one does not raise -- it silently returns the
+    English fallback, which is how a fully translated question shipped in
+    English on the first attempt.
+    """
+    table = _TABLES.get(normalise(lang))
+    if table:
+        translated = table.UI.get(key)
+        if translated:
+            return translated
+    return UI_EN.get(key, key)
 
 
 def symptom_text(symptom_id: str, lang: str) -> Dict[str, str]:
