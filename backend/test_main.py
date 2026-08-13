@@ -26,6 +26,30 @@ client = TestClient(app)
 
 LEVELS = {"emergency", "urgent_care", "self_care", "unknown", "crisis"}
 
+# Every key a /triage response must carry, on every path through the endpoint.
+# The crisis branch returns early and had drifted out of sync — it was missing
+# follow_up_questions, so a client reading that field unconditionally would have
+# broken on the one result it can least afford to mishandle. Checked as a set
+# rather than per-field so the next key added to one branch and not the other
+# fails here instead of in someone's browser.
+TRIAGE_KEYS = {
+    "event_id",
+    "symptoms_detected",
+    "symptom_details",
+    "urgency_level",
+    "message",
+    "reason",
+    "extraction_source",
+    "contacts",
+    "recommended_specialties",
+    "disclaimer",
+    "safety_note",
+    "context_notes",
+    "follow_up_questions",
+    "versions",
+    "lang",
+}
+
 
 def _triage(message: str) -> dict:
     response = client.post("/triage", json={"message": message})
@@ -140,6 +164,35 @@ def test_recommended_specialties_are_real():
     for specialty in body["recommended_specialties"]:
         assert specialty["id"] in SPECIALTIES, specialty
         assert specialty["name"] and specialty["focus"]
+
+
+def test_every_triage_path_returns_the_same_shape():
+    """The crisis branch returns early, so it can drift without anything failing.
+
+    It did: follow_up_questions was added to the ordinary path and not to this
+    one, and every test still passed because each asserted on the fields it
+    happened to care about. Only running the app surfaced it.
+    """
+    paths = {
+        "ordinary": "I have a headache",
+        "emergency": "chest pain and difficulty breathing",
+        "crisis": "I want to end my life",
+        "nothing recognised": "I want to book an appointment",
+        "override": "my father collapsed and is not responding",
+    }
+    failures = []
+    for label, message in paths.items():
+        keys = set(_triage(message))
+        if keys != TRIAGE_KEYS:
+            missing = sorted(TRIAGE_KEYS - keys)
+            extra = sorted(keys - TRIAGE_KEYS)
+            failures.append(f"{label}: missing={missing} extra={extra}")
+    assert not failures, "\n".join(failures)
+
+
+def test_crisis_is_never_asked_follow_up_questions():
+    """Someone in crisis needs a counsellor's number, not a questionnaire."""
+    assert _triage("I want to end my life")["follow_up_questions"] == []
 
 
 if __name__ == "__main__":

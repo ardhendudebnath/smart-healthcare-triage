@@ -179,6 +179,11 @@ def triage(request: TriageRequest):
             "disclaimer": i18n.simple("disclaimer", lang, DISCLAIMER),
             "safety_note": None,
             "context_notes": [],
+            # Always present, always empty here. Someone in crisis is never
+            # asked anything, but the field has to exist: a client that reads
+            # it unconditionally would otherwise break on precisely the result
+            # it can least afford to mishandle.
+            "follow_up_questions": [],
             "versions": version.stamp(),
             "lang": lang,
         }
