@@ -7,9 +7,25 @@ Describe symptoms in plain English, Hindi or Bengali; get back an urgency level
 recognised), which helpline to call, which kind of specialist to see, and a
 directory of local departments with live open/closed badges.
 
+- **Works offline.** The app, the symptom guide and the doctor directory are
+  cached, so it opens and stays useful with no signal. Fresh triage needs a
+  connection and says so — it never replays an old answer.
+- **Asks follow-up questions.** Two or three targeted questions can move a
+  headache from routine to emergency. Answers can only ever escalate.
+- **Records every decision.** Each result is stamped with the exact ruleset and
+  vocabulary that produced it, and written to an append-only audit trail.
+- **Hands off to a clinician.** A structured summary endpoint gives the doctor
+  who sees the patient next the words they actually wrote and what graded them.
+- **Three languages throughout**, including the offline extraction path.
+
 > **This is a prototype, not medical advice.** It does not diagnose. Every
 > result carries a disclaimer and, where relevant, an instruction to call 112.
 > Do not use it as the basis for a real clinical decision.
+>
+> The urgency rules and the follow-up questions are built from commonly
+> published warning signs and **have not been reviewed by a clinician**. The
+> audit trail exists to make that review possible; it is not a substitute for
+> it, and no amount of engineering here changes that.
 
 ---
 
@@ -75,9 +91,129 @@ refresh the browser.
 smt/Scripts/python.exe -m pytest backend
 ```
 
-75 tests, covering symptom extraction (including negation, typo tolerance and
+122 tests, covering symptom extraction (including negation, typo tolerance and
 the three-language vocabulary), urgency rules, age and duration escalation,
-opening-hours logic, safety overrides and the API endpoints.
+opening-hours logic, safety overrides, version stamping, the audit trail, the
+follow-up questions and the API endpoints.
+
+Two of them are load-bearing rather than routine, and are worth knowing about
+before changing anything they cover:
+
+- `test_no_answer_can_ever_lower_a_grade` checks every combination of follow-up
+  answers against every starting grade. A single rule with a de-escalating
+  effect would be easy to add and dangerous to ship.
+- `test_every_phrase_finds_its_own_symptom` walks all 487 phrases in the
+  vocabulary and asserts each one still extracts the symptom that owns it,
+  catching phrases made unreachable by a lemma clash.
+
+## API
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `POST` | `/triage` | Grade a description. Returns urgency, contacts, specialities, version stamps, an `event_id` and any follow-up questions. |
+| `POST` | `/triage/{event_id}/followup` | Re-grade with follow-up answers folded in. |
+| `GET` | `/triage/{event_id}/summary` | Structured clinical handoff for the next doctor. |
+| `GET` | `/version` | Which app, ruleset and vocabulary are serving. |
+| `GET` | `/audit/stats` | Aggregate counts. No free text, no individuals. |
+| `GET` | `/audit/unrecognised` | Inputs the vocabulary could not read. |
+| `GET` | `/symptoms` `/specialties` `/doctors` `/languages` | Reference data, per language. |
+
+## Offline
+
+The service worker caches the shell, the symptom vocabulary, the specialities
+and the doctor directory. Open the app with no signal and the emergency
+numbers, the symptom guide and the directory all still work.
+
+The rule throughout is that **cached information is fine and cached judgement is
+not**. `POST /triage` is never cached and never falls back. Replaying an earlier
+answer against new symptoms would let someone read a stale grade as a verdict on
+what they just typed, so offline triage fails loudly and points at 112 instead.
+
+The 112 button needs none of this — `tel:` links are handled by the dialer and
+work with no network, no cache and no service worker at all.
+
+### Deploying a change to the frontend
+
+Bump **both** together, or returning browsers keep running the old app:
+
+- `?v=` on the stylesheet and script in `frontend/index.html`
+- `CACHE_VERSION` in `frontend/sw.js` (and the matching `?v=` in `SHELL_ASSETS`)
+
+This is not housekeeping. A stale cache means a user running last month's triage
+rules against this month's interface, with nothing on screen to suggest
+anything is wrong.
+
+## Traceability and the audit trail
+
+Every graded result carries a version stamp:
+
+```json
+"versions": { "app": "0.5.0", "ruleset": "4bd97f2ed034", "vocabulary": "92b8de396605" }
+```
+
+The ruleset and vocabulary values are **content hashes, not hand-typed numbers**.
+A version someone has to remember to bump is wrong the moment they forget, and
+it fails silently — the log keeps saying `v3` while `v3` quietly means three
+different things. They are separate from each other because "we started
+recognising that phrase" and "we changed how we grade it" have different
+consequences.
+
+Each decision is written to `backend/audit.db` (SQLite, created automatically)
+with the stamps that produced it. The log is append-only: no update, no per-row
+delete. `audit.purge_before(days)` is the single exception and removes whole
+date ranges to honour a retention policy — data protection, not revision.
+
+A failed write never blocks a result. An app that stops giving urgency advice
+because a disk filled up has failed at the only thing that matters.
+
+### This database is health data
+
+It contains free text about people's symptoms. It is git-ignored along with its
+WAL sidecars, and it should live on an encrypted disk with `purge_before` on a
+schedule. Those are deployment decisions the code cannot make for you.
+
+What is deliberately **not** stored: no name, no phone number, no IP address,
+nothing identifying. Exact age is reduced to a band (`73` becomes `65_79`) since
+the rules only use the band. Crisis disclosures are counted but their text is
+withheld — knowing the path fired is what safety review needs, and keeping a
+verbatim record of someone saying they want to hurt themselves is a much heavier
+thing to hold.
+
+### The most useful query in the project
+
+```bash
+curl http://127.0.0.1:8000/audit/unrecognised
+```
+
+Every row is a real person who described a real problem in words the
+79-symptom vocabulary does not contain. It is a direct instruction about which
+phrase to add next — and, later, the labelled training set if the extraction
+step is ever replaced by a model.
+
+## Follow-up questions
+
+"I have a headache" says almost nothing. One that built over a day is ordinary;
+one that hit full force in seconds is a possible bleed. `/triage` returns up to
+three questions that separate such cases, and `/triage/{id}/followup` re-grades
+with the answers.
+
+Four rules govern them, and they matter more than the question list:
+
+1. **Answers can only escalate.** This is what makes them safe to answer
+   carelessly. Chest pain is graded emergency deliberately — over-triaging most
+   people because the cost of missing a cardiac case is not comparable — and a
+   "no" must never undo that. It means "no new information", not "less urgent
+   than we thought".
+2. **Nothing is asked once the result is emergency or crisis.** That person
+   needs an ambulance or a counsellor, not a questionnaire.
+3. **Answers are optional.** The first result is a real result.
+4. **Where an answer maps onto a known symptom it adds that symptom** and lets
+   `knowledge_graph.py` re-grade, rather than deciding urgency separately. One
+   graded path through the app instead of two that can disagree.
+
+Refinements are recorded as new audit events rather than overwriting the
+original — both are true, and keeping only the second would hide the escalation
+that is the point of asking.
 
 ## Optional: Gemini extraction
 
@@ -134,11 +270,37 @@ patient, exit 1.
 
 ```
 backend/     FastAPI app, triage logic, symptom vocabulary, translations, tests
-frontend/    Three-tab UI: symptom checker, symptom guide, doctor directory
+frontend/    Three-tab UI, service worker, PWA manifest
 smt/         Virtual environment (git-ignored, created during setup)
 ```
 
-Key backend modules: `main.py` (API), `nlp_utils.py` (extraction), `symptoms.py`
-(79-symptom vocabulary), `context.py` (age and duration escalation), `safety.py`
-(red-flag overrides), `hours.py` (open/closed logic), `doctors.py` (directory),
-`i18n.py` (English, Hindi, Bengali).
+Backend modules, roughly in the order a request meets them:
+
+| Module | Role |
+| --- | --- |
+| `main.py` | The API. Layers the steps below in a fixed order. |
+| `safety.py` | Crisis and plain-language emergency overrides. Runs first. |
+| `nlp_utils.py` | Extraction: lemmatisation, fuzzy matching, negation. |
+| `llm_extract.py` | Optional Gemini extraction, with offline fallback. |
+| `symptoms.py` | The 79-symptom, 487-phrase vocabulary. |
+| `phrases_indic.py` | Hindi and Bengali red flags for the offline path. |
+| `knowledge_graph.py` | The urgency rules. Deterministic on purpose. |
+| `context.py` | Age and duration. Can only escalate. |
+| `followup.py` | The questions that sharpen a result. Can only escalate. |
+| `version.py` | Content-hashed ruleset and vocabulary stamps. |
+| `audit.py` | Append-only record of every decision. |
+| `hours.py` | Open-now logic for the directory. |
+| `doctors.py` | The directory, with placeholder fallback. |
+| `i18n.py` | English, Hindi, Bengali. No user-facing text in the frontend. |
+
+Frontend: `index.html`, `styles.css`, `app.js` (no framework, no build step),
+plus `sw.js` and `manifest.json` for offline use.
+
+### One deliberate architectural choice
+
+There is **no framework and no build step**, and that is not an oversight. A
+Node toolchain is one more thing that can break five minutes before a
+demonstration, and the app is three tabs of mostly static content. The urgency
+rules are likewise deterministic rather than learned, so every decision is
+reproducible, testable and explainable to a clinician — which a model could not
+offer.
