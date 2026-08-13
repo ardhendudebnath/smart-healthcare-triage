@@ -473,38 +473,143 @@ input[type="number"]:focus, select:focus { border-color: var(--brand); }
   .followup { display: none; }
 }
 
+/* -------------------------------------------------------- view transitions */
+/* Choreography for the animations started in app.js. Anything not named here
+   falls under ::view-transition-old/new(root) and simply cross-fades.
+
+   Timings are short on purpose. This is a medical tool, not a showcase: the
+   animation exists to show that something changed and to carry the eye to it,
+   and anything slower puts a delay between a person and an urgency grade. */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: .22s;
+  animation-timing-function: ease;
+}
+
+/* The result card morphs; its badge morphs independently and a little slower,
+   so the colour change lands after the card has settled and is the last thing
+   to move. */
+::view-transition-group(triage-result) { animation-duration: .3s; }
+::view-transition-group(level-badge) { animation-duration: .38s; }
+
+/* Panels slide a short distance as they swap, giving the three tabs a sense of
+   sitting side by side rather than replacing one another. */
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+@keyframes panel-out {
+  to { opacity: 0; transform: translateY(-4px); }
+}
+
+::view-transition-new(root) { animation-name: panel-in; }
+::view-transition-old(root) { animation-name: panel-out; }
+
+/* A belt-and-braces stop. app.js already skips startViewTransition entirely
+   under reduced motion, so this only catches a transition begun before the
+   preference changed — but a half-finished animation of a medical verdict is
+   worth being certain about. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* --------------------------------------------------------- micro-interactions */
+/* Small, and only where something is genuinely clickable. Buttons that respond
+   to a press feel answerable; cards that lift invite the click they accept. */
+.btn {
+  transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease;
+}
+
+.btn:active { transform: translateY(1px); }
+
+.doctor-card {
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.doctor-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+}
+
+.tab { transition: color .14s ease, border-color .14s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .doctor-card, .tab { transition: none; }
+  .btn:active, .doctor-card:hover { transform: none; }
+}
+
 /* ---------------------------------------------------------------- result */
 .result {
   margin-top: var(--s5);
   background: var(--bg-raised);
   border: 1px solid var(--border);
-  border-left: 5px solid var(--level, var(--unknown));
   border-radius: var(--radius-lg);
-  padding: var(--s5);
   box-shadow: var(--shadow-lift);
+  overflow: hidden;          /* so the header tint meets the rounded corner */
+  /* Named so the browser morphs this element between renders instead of
+     cross-fading the whole page. See renderResult in app.js. */
+  view-transition-name: triage-result;
 }
 
 .result[hidden] { display: none; }
 
-.result__header { display: flex; align-items: flex-start; gap: var(--s4); flex-wrap: wrap; }
+/* The verdict, given the weight it deserves. This is the whole product: every
+   other block on the page exists to support it, and it previously read as a
+   sibling of the input field above it. A tinted band carrying the level colour
+   separates the answer from its supporting detail at a glance. */
+.result__header {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  flex-wrap: wrap;
+  background: var(--level-tint, var(--unknown-tint));
+  border-bottom: 1px solid var(--level, var(--unknown));
+  border-left: 5px solid var(--level, var(--unknown));
+  padding: var(--s4) var(--s5);
+}
+
+/* Everything after the header keeps the old inset, applied per block rather
+   than on .result, which now owns the full-bleed band above. */
+.result > :not(.result__header) {
+  margin-inline: var(--s5);
+}
+
+.result > :last-child { margin-bottom: var(--s5); }
 
 .level-badge {
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
   flex: none;
-  background: var(--level-tint, var(--unknown-tint));
+  background: var(--bg-raised);
   color: var(--level, var(--unknown));
-  border: 1px solid var(--level, var(--unknown));
+  border: 1.5px solid var(--level, var(--unknown));
   border-radius: 999px;
-  padding: 5px var(--s4);
-  font-size: .8rem;
+  padding: 6px var(--s4);
+  font-size: .82rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: .05em;
+  /* Morphs separately from the card, so a routine badge visibly becomes an
+     emergency one rather than the whole panel fading. The colour change is the
+     single most important thing on screen when a follow-up escalates. */
+  view-transition-name: level-badge;
 }
 
-.result__message { margin: 0; font-size: 1.05rem; font-weight: 550; flex: 1 1 260px; }
+/* Fluid rather than fixed: the verdict should read as a statement on a phone
+   and hold its authority on a desktop without a second breakpoint. */
+.result__message {
+  margin: 0;
+  font-size: clamp(1.05rem, .96rem + .45vw, 1.3rem);
+  font-weight: 600;
+  line-height: 1.4;
+  flex: 1 1 260px;
+  text-wrap: pretty;
+}
 
 .result__reason {
   margin: var(--s4) 0 0;
@@ -644,6 +749,14 @@ input[type="number"]:focus, select:focus { border-color: var(--brand); }
   border-radius: var(--radius-lg);
   padding: var(--s4) var(--s5) var(--s5);
   box-shadow: var(--shadow);
+
+  /* The guide renders all 79 symptoms at once across fourteen body systems,
+     which is most of the page's DOM. This lets the browser skip layout and
+     paint for cards scrolled out of view. contain-intrinsic-size gives it a
+     placeholder height so the scrollbar stays honest instead of jumping as
+     cards are measured on approach. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
 }
 
 .system-card__title {
@@ -711,6 +824,18 @@ input[type="number"]:focus, select:focus { border-color: var(--brand); }
   display: grid;
   gap: var(--s4);
   grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+}
+
+/* Doctor cards render in two places at different widths — three inside a result
+   and the full directory below. A container query lets one card adapt to the
+   column it is actually in, rather than to the viewport, which is what a media
+   query would measure and get wrong in the narrower of the two. */
+.doctor-card { container-type: inline-size; }
+
+@container (max-width: 340px) {
+  /* Stack the avatar above the name instead of squeezing both onto one line. */
+  .doctor-card__top { flex-direction: column; gap: var(--s3); }
+  .doctor-card__actions { flex-direction: column; align-items: stretch; }
 }
 
 .doctor-card {
@@ -935,6 +1060,24 @@ input[type="number"]:focus, select:focus { border-color: var(--brand); }
     border-radius: 0;
     padding: 12pt;
     margin: 0;
+    overflow: visible;   /* screen clips the tint band; paper must not clip text */
+  }
+
+  /* The screen layout insets the result's children instead of padding the card,
+     so the header band can run full width. On paper .result is padded again,
+     and leaving those insets in place would indent every block twice. */
+  .result > :not(.result__header) { margin-inline: 0; }
+  .result > :last-child { margin-bottom: 0; }
+
+  /* The tinted band is a screen device. On paper the urgency still reads from
+     the badge and the wording, which is what a clinician needs — and a colour
+     wash behind black text is the first thing to go wrong on a mono printer. */
+  .result__header {
+    background: #fff;
+    border: none;
+    border-bottom: 1pt solid #000;
+    padding: 0 0 8pt;
+    margin-bottom: 8pt;
   }
 
   .level-badge {

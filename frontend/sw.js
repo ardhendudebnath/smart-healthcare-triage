@@ -31,7 +31,7 @@
 /* Bump to invalidate every cache. Old caches are deleted on activate, so a
  * stale shell cannot survive a deploy — a real hazard when the thing being
  * updated is medical guidance. */
-const CACHE_VERSION = "triage-v2";
+const CACHE_VERSION = "triage-v4";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const DATA_CACHE = `${CACHE_VERSION}-data`;
 
@@ -42,8 +42,8 @@ const DATA_CACHE = `${CACHE_VERSION}-data`;
 const SHELL_ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=2",
-  "./app.js?v=2",
+  "./styles.css?v=4",
+  "./app.js?v=4",
   "./manifest.json",
 ];
 
@@ -51,31 +51,91 @@ const SHELL_ASSETS = [
  * deploy, and is useful offline. */
 const CACHEABLE_API = ["/symptoms", "/specialties", "/doctors", "/languages"];
 
+/**
+ * Cache the shell if it is not already complete. Safe to call repeatedly.
+ *
+ * Install runs once. If it fails — a flaky connection, a captive portal, a
+ * server restarted mid-request — the worker still activates, the caches stay
+ * empty, and offline support is off permanently with nothing to say so. The app
+ * looks perfectly healthy right up until the network goes away and it will not
+ * load at all. Observed exactly that here after an install raced a server
+ * restart: the worker reported "activated" with an empty cache.
+ *
+ * That failure lands hardest on the person this feature exists for. Someone
+ * whose first visit happens on a bad connection is the most likely to need the
+ * app offline later, and was the least likely to have it.
+ *
+ * So caching is a repair that re-runs on activate and whenever the page regains
+ * connectivity, rather than a one-shot. addAll stays atomic per attempt — a
+ * half-cached shell is still worse than none, because it fails in ways nobody
+ * can reproduce — but a failed attempt is no longer the end of the story.
+ */
+async function ensureShellCached() {
+  /* The whole body is guarded, not just the addAll. Opening the cache and
+   * building the URLs can throw too, and an escaping rejection here used to
+   * break the activate chain before clients.claim() ran — leaving a worker that
+   * controlled no pages, cached nothing, and still reported "activated". A
+   * caching problem must never cost the worker control of the app. */
+  try {
+    const cache = await caches.open(SHELL_CACHE);
+    const cached = await cache.keys();
+    const cachedKeys = new Set(
+      cached.map((request) => {
+        const url = new URL(request.url);
+        return url.pathname + url.search;
+      })
+    );
+
+    const missing = SHELL_ASSETS.filter((asset) => {
+      const url = new URL(asset, self.location.href);
+      return !cachedKeys.has(url.pathname + url.search);
+    });
+
+    if (!missing.length) return true;
+
+    await cache.addAll(SHELL_ASSETS);
+    return true;
+  } catch (error) {
+    console.warn("[sw] could not cache the shell; will retry later:", error);
+    return false;
+  }
+}
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(SHELL_CACHE)
-      /* addAll is atomic: one failed asset aborts the install and the old
-       * worker stays active, rather than leaving a half-cached shell that
-       * breaks in ways nobody can reproduce. */
-      .then((cache) => cache.addAll(SHELL_ASSETS))
-      .then(() => self.skipWaiting())
-  );
+  /* skipWaiting runs whether or not caching worked. A first attempt that failed
+   * must still yield an active worker, because every retry path lives on the
+   * active one. */
+  event.waitUntil(ensureShellCached().then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((names) =>
-        Promise.all(
+    (async () => {
+      try {
+        const names = await caches.keys();
+        await Promise.all(
           names
             .filter((name) => !name.startsWith(CACHE_VERSION))
             .map((name) => caches.delete(name))
-        )
-      )
-      .then(() => self.clients.claim())
+        );
+        await ensureShellCached();
+      } catch (error) {
+        console.warn("[sw] activate housekeeping failed:", error);
+      }
+      /* Outside the try, and last: claiming the open pages is the one step that
+       * must happen every time. Without it the worker controls nothing, so no
+       * fetch is intercepted and nothing can be repaired later either. */
+      await self.clients.claim();
+    })()
   );
+});
+
+/* The page posts this when the browser reports the network is back. That is the
+ * moment a shell which failed to cache can finally be fetched. */
+self.addEventListener("message", (event) => {
+  if (event.data === "retry-shell-cache") {
+    event.waitUntil(ensureShellCached());
+  }
 });
 
 self.addEventListener("fetch", (event) => {

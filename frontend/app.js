@@ -269,6 +269,35 @@ function show(node, visible) {
   node.hidden = !visible;
 }
 
+/* ------------------------------------------------------- view transitions */
+
+/** True when the reader has asked the system for less animation. */
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/**
+ * Run a DOM update inside a View Transition where the browser supports one.
+ *
+ * Two reasons this is a wrapper rather than called directly. Support is still
+ * uneven, and a missing API must degrade to an instant update rather than an
+ * exception — an animation is the least important thing on this page. And the
+ * reduced-motion check belongs here rather than in CSS: honouring it by
+ * animating anyway and hiding the result is not honouring it, and for a reader
+ * whose vestibular disorder is why they set it, a cross-fade of a medical
+ * verdict is exactly the wrong thing to insist on.
+ *
+ * The callback must update the DOM synchronously; the browser snapshots before
+ * and after and interpolates between them.
+ */
+function withViewTransition(update) {
+  if (!document.startViewTransition || prefersReducedMotion()) {
+    update();
+    return;
+  }
+  document.startViewTransition(update);
+}
+
 /* ------------------------------------------------------------------- tabs */
 
 const TABS = [
@@ -278,11 +307,13 @@ const TABS = [
 ];
 
 function selectTab(tabId) {
-  TABS.forEach(({ tab, panel }) => {
-    const isActive = tab === tabId;
-    $(tab).classList.toggle("is-active", isActive);
-    $(tab).setAttribute("aria-selected", String(isActive));
-    show($(panel), isActive);
+  withViewTransition(() => {
+    TABS.forEach(({ tab, panel }) => {
+      const isActive = tab === tabId;
+      $(tab).classList.toggle("is-active", isActive);
+      $(tab).setAttribute("aria-selected", String(isActive));
+      show($(panel), isActive);
+    });
   });
 }
 
@@ -367,7 +398,25 @@ function renderContextNotes(notes) {
   show(list, Boolean(notes && notes.length));
 }
 
+/**
+ * Show a result, animating between the old and new one where supported.
+ *
+ * The transition earns its place on the second render rather than the first.
+ * Answering a follow-up question can move a verdict from routine to emergency,
+ * and a badge that silently swaps colour is easy to miss — someone who looked
+ * away for a second returns to a different answer with nothing to say it
+ * changed. Morphing the card draws the eye to the one thing that matters.
+ */
 function renderResult(data) {
+  const isUpdate = Boolean(lastResult) && !$("result").hidden;
+  if (isUpdate) {
+    withViewTransition(() => paintResult(data));
+  } else {
+    paintResult(data);
+  }
+}
+
+function paintResult(data) {
   lastResult = data;
   const result = $("result");
   const level = LEVELS[data.urgency_level] || LEVELS.unknown;
@@ -868,7 +917,24 @@ function updateOfflineBanner() {
   show($("offline-banner"), !navigator.onLine);
 }
 
-window.addEventListener("online", updateOfflineBanner);
+/**
+ * Ask the worker to cache the shell if it could not before.
+ *
+ * A first visit on a bad connection leaves the worker active with nothing
+ * cached and no reason to try again, so the app would never gain offline
+ * support — for exactly the user most likely to need it. Coming back online is
+ * the moment that becomes fixable.
+ */
+function askServiceWorkerToRetryCaching() {
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage("retry-shell-cache");
+  }
+}
+
+window.addEventListener("online", () => {
+  updateOfflineBanner();
+  askServiceWorkerToRetryCaching();
+});
 window.addEventListener("offline", updateOfflineBanner);
 updateOfflineBanner();
 
