@@ -140,18 +140,30 @@ def test_describe_groups_consecutive_days():
     assert describe(None) == ""
 
 
-def test_directory_entries_carry_usable_hours():
+def test_placeholder_entries_carry_usable_hours():
     """Every placeholder must produce a real status, not "unknown".
 
     The badges cannot be seen working — or seen to be broken — if the shipped
     directory has no hours at all.
+
+    Built directly rather than read back from all_doctors(), so this holds
+    whether or not a real doctors.json is present. Reading the live directory
+    made the check assert nothing the moment someone filled one in, since a real
+    file replaces the placeholders outright.
+
+    A real directory is deliberately not covered here. Several Agartala
+    institutions publish specialities but not OPD timings, and inventing hours
+    to satisfy a test would mark a department open when it is shut — the one
+    failure the directory exists to avoid. Validating real entries belongs to
+    check_doctors.py, which sees the raw file and can tell a missing hours block
+    (a warning) from one that was written and could not be parsed (an error).
     """
     failures = []
-    for doctor in doctors.all_doctors():
+    for doctor in doctors._build_placeholders():
         result = status(doctor.get("hours"), MON(11))
         if result["status"] == STATUS_UNKNOWN:
             failures.append(doctor["name"])
-    assert not failures, f"doctors with unusable hours: {failures[:5]}"
+    assert not failures, f"placeholders with unusable hours: {failures[:5]}"
 
 
 def test_emergency_placeholders_are_always_open():
