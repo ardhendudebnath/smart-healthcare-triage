@@ -176,6 +176,39 @@ def test_purge_rejects_a_negative_cutoff():
         audit.purge_before(-1)
 
 
+def test_purged_text_is_gone_from_the_file_not_just_the_table():
+    """A purge must remove the bytes, not only unlink the rows.
+
+    This is the test that matters for a retention policy. A plain DELETE leaves
+    the free text in SQLite's free pages and in the write-ahead log, where it
+    stays readable to anyone who opens the file -- so the table can report zero
+    rows while every complaint is still recoverable. Asserting on the raw bytes
+    is the only way to tell the two apart, and querying the table cannot.
+    """
+    secret = "pineapple thunderstorm sarsaparilla"  # nothing else would emit this
+    _record(input_text=secret)
+
+    old = (datetime.now(timezone.utc) - timedelta(days=400)).isoformat()
+    with audit._connect() as connection:
+        connection.execute("UPDATE triage_events SET created_at = ?", (old,))
+
+    assert audit.purge_before(365) == 1
+
+    for suffix in ("", "-wal"):
+        path = audit.DB_FILE + suffix
+        if not os.path.exists(path):
+            continue
+        with open(path, "rb") as handle:
+            assert secret.encode() not in handle.read(), f"still recoverable from {path}"
+
+
+def test_a_purge_that_removes_nothing_does_not_rewrite_the_file():
+    """Vacuuming rewrites the whole database, so it should not run for nothing."""
+    _record()
+    assert audit.purge_before(365) == 0
+    assert audit.statistics()["total_events"] == 1
+
+
 # --- failure behaviour ----------------------------------------------------
 
 def test_a_broken_database_never_raises(monkeypatch):

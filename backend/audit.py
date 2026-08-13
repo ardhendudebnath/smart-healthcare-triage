@@ -52,6 +52,7 @@ import os
 import sqlite3
 import threading
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
@@ -118,13 +119,27 @@ def band_age(age: Optional[int]) -> Optional[str]:
     return "80_plus"
 
 
-def _connect() -> sqlite3.Connection:
+@contextmanager
+def _connect():
+    """A connection that commits on success and always closes.
+
+    The closing half is not tidiness. `with sqlite3.connect(...) as conn` is a
+    *transaction* manager, not a closing one: it commits and leaves the handle
+    open. Every call here used to leak one, and an open handle holds a lock that
+    makes VACUUM fail -- silently, since _reclaim only logs. The visible symptom
+    was a purge reporting success while the deleted text stayed readable in the
+    file, which is the one outcome this module must not produce.
+    """
     connection = sqlite3.connect(DB_FILE, timeout=5.0)
     # WAL lets readers work while a write is in flight, which matters because
     # the reporting queries below run against a live database.
     connection.execute("PRAGMA journal_mode=WAL")
     connection.row_factory = sqlite3.Row
-    return connection
+    try:
+        with connection:
+            yield connection
+    finally:
+        connection.close()
 
 
 def init() -> bool:
@@ -307,6 +322,15 @@ def purge_before(cutoff_days: int) -> int:
     date-ranged on purpose -- a retention policy, not a way to revise history.
     Run it on a schedule; free text about someone's health should not be kept
     indefinitely because nobody chose a number.
+
+    Vacuums afterwards, and that step is the difference between the data being
+    gone and merely being unreachable. A plain DELETE unlinks rows from the
+    schema but leaves their bytes in SQLite's free pages and in the write-ahead
+    log, where the symptom descriptions stay perfectly readable to anyone who
+    opens the file. Measured on this database: after a purge reported success
+    and the table read empty, every complaint was still recoverable from the raw
+    file. For a retention policy over health data that is not a purge at all --
+    it is a promise the caller has no way to know was not kept.
     """
     if not init():
         return 0
@@ -319,7 +343,40 @@ def purge_before(cutoff_days: int) -> int:
             cursor = connection.execute(
                 "DELETE FROM triage_events WHERE created_at < ?", (cutoff,)
             )
-            return cursor.rowcount
+            removed = cursor.rowcount
     except sqlite3.Error as exc:
         log.warning("Could not purge audit records (%s).", exc)
         return 0
+
+    if removed:
+        _reclaim()
+    return removed
+
+
+def _reclaim() -> None:
+    """Checkpoint the WAL and rewrite the file, so purged text is really gone.
+
+    Runs on its own autocommit connection because SQLite refuses to VACUUM
+    inside a transaction, and Python's sqlite3 opens one implicitly. Failure is
+    logged rather than raised: the rows are already deleted, so the caller's
+    request succeeded even if the disk did not shrink -- but it is logged at
+    warning level because someone relying on a retention policy needs to know
+    the file still holds what they asked to be rid of.
+    """
+    try:
+        with _write_lock:
+            connection = sqlite3.connect(DB_FILE, timeout=30.0, isolation_level=None)
+            try:
+                # TRUNCATE rather than PASSIVE: the point is to empty the -wal
+                # file, not merely fold it back into the database.
+                connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                connection.execute("VACUUM")
+            finally:
+                connection.close()
+    except sqlite3.Error as exc:
+        log.warning(
+            "Purged rows but could not reclaim the file (%s) — deleted text may "
+            "still be recoverable from %s.",
+            exc,
+            DB_FILE,
+        )
