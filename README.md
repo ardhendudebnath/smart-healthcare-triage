@@ -17,6 +17,8 @@ directory of local departments with live open/closed badges.
 - **Hands off to a clinician.** A structured summary endpoint gives the doctor
   who sees the patient next the words they actually wrote and what graded them.
 - **Three languages throughout**, including the offline extraction path.
+- **Installable, and animated where it helps.** View Transitions carry the eye
+  to a verdict that changed; reduced-motion preferences turn them off entirely.
 
 > **This is a prototype, not medical advice.** It does not diagnose. Every
 > result carries a disclaimer and, where relevant, an instruction to call 112.
@@ -132,16 +134,67 @@ what they just typed, so offline triage fails loudly and points at 112 instead.
 The 112 button needs none of this — `tel:` links are handled by the dialer and
 work with no network, no cache and no service worker at all.
 
+### Caching repairs itself
+
+Install runs once. If it fails — a flaky connection, a captive portal, a server
+restarted mid-request — the worker still activates and the caches stay empty,
+which used to mean offline support was off permanently with nothing to say so.
+The app looks healthy right up until the network goes away and it will not load
+at all.
+
+That failure lands hardest on the person the feature exists for: someone whose
+first visit happens on a bad connection is the most likely to need the app
+offline later. So caching re-runs on activate and whenever the page reports the
+network is back, rather than being a one-shot. `clients.claim()` runs last and
+outside the error handling, because a caching problem must never cost the worker
+control of the app.
+
 ### Deploying a change to the frontend
 
 Bump **both** together, or returning browsers keep running the old app:
 
-- `?v=` on the stylesheet and script in `frontend/index.html`
-- `CACHE_VERSION` in `frontend/sw.js` (and the matching `?v=` in `SHELL_ASSETS`)
+- `?v=` on the stylesheet and script in `frontend/index.html` (currently `v=4`)
+- `CACHE_VERSION` in `frontend/sw.js` (currently `triage-v4`) and the matching
+  `?v=` in `SHELL_ASSETS` — the browser requests `app.js?v=4`, so precaching a
+  bare `app.js` would store a URL nothing ever asks for
 
 This is not housekeeping. A stale cache means a user running last month's triage
 rules against this month's interface, with nothing on screen to suggest
 anything is wrong.
+
+## Interface
+
+No framework and no build step; everything below is native browser capability.
+
+**View Transitions** animate tab switches and re-graded results. The transition
+earns its place on the second render rather than the first: answering a
+follow-up can move a verdict from routine to emergency, and a badge that
+silently swaps colour is easy to miss. The card morphs, and the badge morphs
+separately and slightly slower so the colour change is the last thing to move. A
+first render animates nothing — there is no previous state, and an entrance
+flourish in front of an urgency grade is a delay dressed as polish.
+
+**Reduced motion** is checked in JavaScript, not only in CSS.
+`startViewTransition` is never called and the update is instant, because
+honouring the preference by animating anyway and hiding the result is not
+honouring it. The CSS override remains as a second line of defence.
+
+**The result panel** leads with a tinted band carrying the urgency colour, so
+the verdict separates from its supporting detail at a glance. Urgency is always
+carried by a word and an icon as well as a colour — roughly one man in twelve
+cannot reliably tell red from green, and "how urgent is this" is the question
+they came to ask.
+
+**Performance.** `content-visibility` on the symptom guide, which renders all 79
+symptoms and is most of the page's DOM. Container queries on doctor cards, which
+appear inside a result and in the full directory at different widths, so a card
+adapts to its column rather than guessing from the viewport.
+
+**Print** is a supported output, not an afterthought: the point of saving a
+result is handing it to a doctor. The screen layout insets the result's children
+so the header band can run full width, and the print block resets both that and
+the colour wash — a tint behind black text is the first thing to go wrong on a
+mono printer.
 
 ## Traceability and the audit trail
 
@@ -293,14 +346,29 @@ Backend modules, roughly in the order a request meets them:
 | `doctors.py` | The directory, with placeholder fallback. |
 | `i18n.py` | English, Hindi, Bengali. No user-facing text in the frontend. |
 
-Frontend: `index.html`, `styles.css`, `app.js` (no framework, no build step),
-plus `sw.js` and `manifest.json` for offline use.
+| Frontend file | Role |
+| --- | --- |
+| `index.html` | Structure only. Every string carries `data-i18n` and is filled from the backend. |
+| `styles.css` | Design tokens, both themes, view-transition choreography, print. |
+| `app.js` | All behaviour. No framework, no bundler, no dependencies. |
+| `sw.js` | Offline caching, and the rule that judgement is never cached. |
+| `manifest.json` | Installable as an app; icons are inline SVG data URIs. |
 
-### One deliberate architectural choice
+### Two deliberate architectural choices
 
-There is **no framework and no build step**, and that is not an oversight. A
-Node toolchain is one more thing that can break five minutes before a
-demonstration, and the app is three tabs of mostly static content. The urgency
-rules are likewise deterministic rather than learned, so every decision is
-reproducible, testable and explainable to a clinician — which a model could not
-offer.
+**No framework and no build step**, and that is not an oversight. A Node
+toolchain is one more thing that can break five minutes before a demonstration,
+and the app is three tabs of mostly static content. Everything the interface
+does — view transitions, container queries, `content-visibility`, offline —
+is native browser capability, so there is nothing to install and nothing to
+compile. If the project grows several more stateful screens, or more people
+start working on it, Vite with a small runtime is the honest next step; until
+one of those is true, adopting a framework would trade a working decision for
+fashion.
+
+**Deterministic rules rather than a learned model.** Every urgency decision is
+reproducible, testable and explainable line by line to a clinician, which a
+model could not offer. The place machine learning genuinely belongs here is
+extraction — turning free text into symptom names — where errors stay
+recoverable because the rules still decide urgency, and where
+`/audit/unrecognised` is already collecting the training data.
