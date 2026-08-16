@@ -63,9 +63,36 @@
     "sharing that campus. Four lookups covers the whole file.",
     "",
     "Helplines are NOT here: 112, 108/102, 104 and Tele-MANAS 14416 live in",
-    "contacts.py and are shown with every triage result already."
+    "contacts.py and are shown with every triage result already.",
+    "",
+    "COORDINATES",
+    "One per campus, since entries share sites. Four decimal places is about",
+    "11 m, far finer than a straight-line directory ranking needs.",
+    "",
+    "  IGM Hospital, AK Road          23.8308, 91.2760",
+    "  AGMC & GB Pant, Kunjaban       23.8603, 91.2928",
+    "  TMC & BRAM, Hapania            23.7847, 91.2592",
+    "  ILS Hospitals, Capital Complex 23.8675, 91.2896",
+    "",
+    "TMC is the most solid: Wikipedia's 23 deg 47'06\"N 91 deg 15'32\"E, a mappls",
+    "record and latlong.net all agree. ILS is confirmed by two independent",
+    "mappls records. IGM and AGMC rest on a single source each.",
+    "",
+    "CHECK ALL FOUR ON A MAP BEFORE ANYONE RELIES ON THEM. A coordinate that is",
+    "slightly wrong puts a hospital on the wrong road while looking perfectly",
+    "correct, and the app will confidently rank it as nearest. This is not",
+    "hypothetical: a search for IGM Hospital returned 23.49, 91.16 — inside",
+    "India, the right way round, passing every per-entry check in",
+    "check_doctors.py, and roughly 39 km away past the Bangladesh border. It was",
+    "caught only by comparing it against the other entries, which is what the",
+    "outlier check in check_doctors.py now does on every run.",
+    "",
+    "Modern Psychiatric Hospital, Narsingarh has no coordinate on purpose. No",
+    "source gives one — only prose about sitting east of the airport — and a",
+    "coordinate derived from that would look exactly as authoritative as a real",
+    "one. The card reads without a distance, which is true, and the entry still",
+    "sorts into the directory rather than being hidden."
   ],
-
   "doctors": [
     {
       "id": "igm-emergency",
@@ -75,10 +102,17 @@
       "hospital": "IGM Hospital, AK Road",
       "city": "Agartala",
       "phone": "0381 2315875",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
-      "hours": { "always_open": true }
+      "lat": 23.8308,
+      "lng": 91.276,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
+      "hours": {
+        "always_open": true
+      }
     },
     {
       "id": "igm-medicine",
@@ -88,16 +122,51 @@
       "hospital": "IGM Hospital, AK Road",
       "city": "Agartala",
       "phone": "0381 2315875",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.8308,
+      "lng": 91.276,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -109,16 +178,51 @@
       "hospital": "IGM Hospital, AK Road",
       "city": "Agartala",
       "phone": "0381 2315875",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.8308,
+      "lng": 91.276,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -130,20 +234,54 @@
       "hospital": "IGM Hospital, AK Road",
       "city": "Agartala",
       "phone": "0381 2315875",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.8308,
+      "lng": 91.276,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
-
     {
       "id": "gbp-casualty",
       "name": "Casualty / Emergency Department",
@@ -153,10 +291,17 @@
       "city": "Agartala",
       "phone": "0381 2357130",
       "email": "agmc@rediffmail.com",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
-      "hours": { "always_open": true }
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
+      "hours": {
+        "always_open": true
+      }
     },
     {
       "id": "gbp-trauma",
@@ -166,10 +311,17 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2356701",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
-      "hours": { "always_open": true }
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
+      "hours": {
+        "always_open": true
+      }
     },
     {
       "id": "gbp-medicine",
@@ -179,16 +331,51 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2357130",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -200,16 +387,51 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2357130",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -221,16 +443,51 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2357130",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -242,16 +499,51 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2357130",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -263,16 +555,50 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2357130",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Hindi", "English"],
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -284,16 +610,50 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2357130",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Hindi", "English"],
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -305,16 +665,50 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2357130",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Hindi", "English"],
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -326,16 +720,51 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2357130",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -347,16 +776,51 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2357130",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -368,16 +832,51 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2357130",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -389,16 +888,51 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2357130",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -410,20 +944,54 @@
       "hospital": "AGMC & GB Pant Hospital, Kunjaban",
       "city": "Agartala",
       "phone": "0381 2357130",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.8603,
+      "lng": 91.2928,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
-
     {
       "id": "ils-emergency",
       "name": "Emergency & Trauma Care",
@@ -432,10 +1000,16 @@
       "city": "Agartala",
       "phone": "+91 89740 50300",
       "email": "info@ilshospitals.com",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Hindi", "English"],
-      "hours": { "always_open": true }
+      "lat": 23.8675,
+      "lng": 91.2896,
+      "languages": [
+        "Bengali",
+        "Hindi",
+        "English"
+      ],
+      "hours": {
+        "always_open": true
+      }
     },
     {
       "id": "ils-cardiology",
@@ -446,9 +1020,13 @@
       "city": "Agartala",
       "phone": "0381 2415000",
       "email": "info@ilshospitals.com",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Hindi", "English"]
+      "lat": 23.8675,
+      "lng": 91.2896,
+      "languages": [
+        "Bengali",
+        "Hindi",
+        "English"
+      ]
     },
     {
       "id": "ils-gastroenterology",
@@ -459,9 +1037,13 @@
       "city": "Agartala",
       "phone": "0381 2415000",
       "email": "info@ilshospitals.com",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Hindi", "English"]
+      "lat": 23.8675,
+      "lng": 91.2896,
+      "languages": [
+        "Bengali",
+        "Hindi",
+        "English"
+      ]
     },
     {
       "id": "ils-orthopaedics",
@@ -472,9 +1054,13 @@
       "city": "Agartala",
       "phone": "0381 2415000",
       "email": "info@ilshospitals.com",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Hindi", "English"]
+      "lat": 23.8675,
+      "lng": 91.2896,
+      "languages": [
+        "Bengali",
+        "Hindi",
+        "English"
+      ]
     },
     {
       "id": "ils-neurology",
@@ -485,11 +1071,14 @@
       "city": "Agartala",
       "phone": "0381 2415000",
       "email": "info@ilshospitals.com",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Hindi", "English"]
+      "lat": 23.8675,
+      "lng": 91.2896,
+      "languages": [
+        "Bengali",
+        "Hindi",
+        "English"
+      ]
     },
-
     {
       "id": "tmc-emergency",
       "name": "Emergency / Casualty",
@@ -498,10 +1087,17 @@
       "hospital": "Tripura Medical College & Dr. BRAM Teaching Hospital, Hapania",
       "city": "Agartala",
       "phone": "0381 2374155",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
-      "hours": { "always_open": true }
+      "lat": 23.7847,
+      "lng": 91.2592,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
+      "hours": {
+        "always_open": true
+      }
     },
     {
       "id": "tmc-medicine",
@@ -511,16 +1107,51 @@
       "hospital": "Tripura Medical College & Dr. BRAM Teaching Hospital, Hapania",
       "city": "Agartala",
       "phone": "0381 2374155",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.7847,
+      "lng": 91.2592,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
@@ -532,20 +1163,54 @@
       "hospital": "Tripura Medical College & Dr. BRAM Teaching Hospital, Hapania",
       "city": "Agartala",
       "phone": "0381 2374155",
-      "lat": null,
-      "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"],
+      "lat": 23.7847,
+      "lng": 91.2592,
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ],
       "hours": {
-        "mon": [["08:00", "15:00"]],
-        "tue": [["08:00", "15:00"]],
-        "wed": [["08:00", "15:00"]],
-        "thu": [["08:00", "15:00"]],
-        "fri": [["08:00", "15:00"]],
-        "sat": [["08:00", "15:00"]],
+        "mon": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
         "sun": []
       }
     },
-
     {
       "id": "mph-narsingarh",
       "name": "Modern Psychiatric Hospital (state psychiatric hospital)",
@@ -555,7 +1220,12 @@
       "city": "Agartala",
       "lat": null,
       "lng": null,
-      "languages": ["Bengali", "Kokborok", "Hindi", "English"]
+      "languages": [
+        "Bengali",
+        "Kokborok",
+        "Hindi",
+        "English"
+      ]
     }
   ]
 }

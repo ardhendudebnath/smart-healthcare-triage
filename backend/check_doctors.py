@@ -23,8 +23,10 @@ The checks are ordered by what actually hurts:
 """
 
 import json
+import math
 import os
 import re
+import statistics
 import sys
 from datetime import datetime
 from typing import Dict, List, Tuple
@@ -39,6 +41,29 @@ DEFAULT_FILE = "doctors.json"
 # since nothing stops this app being pointed at another country.
 INDIA_LAT = (6.0, 37.5)
 INDIA_LNG = (68.0, 97.5)
+
+# An entry this many times further from the centre than the typical entry, and at
+# least OUTLIER_FLOOR_KM away, is worth a human looking at.
+#
+# Relative rather than a fixed distance, because this tool cannot know the scale
+# of the directory it is handed. Fifteen kilometres is a lot for one city and
+# nothing for a state, so the check measures each entry against how spread out
+# its own neighbours are. The floor stops a tightly clustered directory from
+# flagging a hospital two streets further out than the rest.
+#
+# This exists because of a real near-miss. Looking up IGM Hospital returned
+# 23.49, 91.16 -- a confident-looking pair roughly 40 km from Agartala, out past
+# the Bangladesh border. It is in India, the right way round, and passes every
+# other check in this file. Only its distance from the other entries gives it
+# away, which is exactly the failure the directory's own notes warn about: a
+# coordinate that is slightly wrong puts a hospital on the wrong road while
+# looking perfectly correct.
+#
+# A first attempt used a flat 150 km and caught nothing, because the bad
+# coordinate was only 39 km out. Worth remembering that a threshold nobody has
+# tested against a real mistake is decoration.
+OUTLIER_RATIO = 3.0
+OUTLIER_FLOOR_KM = 25.0
 
 # Text that means "I have not filled this in yet". A card reading "Add hospital
 # or clinic name" in a demo is embarrassing; a phone number reading
@@ -190,6 +215,65 @@ def _check_coordinates(report: Report, who: str, entry: Dict) -> bool:
     return True
 
 
+def _distance_km(a: Tuple[float, float], b: Tuple[float, float]) -> float:
+    """Great-circle distance. Matches the formula the frontend ranks with."""
+    radius = 6371.0
+    lat1, lng1 = math.radians(a[0]), math.radians(a[1])
+    lat2, lng2 = math.radians(b[0]), math.radians(b[1])
+    h = (
+        math.sin((lat2 - lat1) / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin((lng2 - lng1) / 2) ** 2
+    )
+    return 2 * radius * math.asin(math.sqrt(h))
+
+
+def _check_spread(report: Report, entries: List[Dict]) -> None:
+    """Flag an entry that sits implausibly far from the rest of the directory.
+
+    Every other coordinate check asks whether a point is valid on its own. This
+    one asks whether it belongs with its neighbours, which is the only way to
+    catch a well-formed coordinate for the wrong place -- the failure mode that
+    actually happens when someone looks a hospital up and copies the first
+    result.
+
+    Compared against the median rather than the mean, so one bad entry cannot
+    drag the centre towards itself and mask its own distance from everything.
+    """
+    located = [
+        (e.get("name") or "?", float(e["lat"]), float(e["lng"]))
+        for e in entries
+        if isinstance(e, dict) and e.get("lat") is not None and e.get("lng") is not None
+    ]
+    if len(located) < 3:
+        return  # too few to say what "with the others" means
+
+    centre = (
+        statistics.median(lat for _, lat, _ in located),
+        statistics.median(lng for _, _, lng in located),
+    )
+    distances = {
+        name: _distance_km(centre, (lat, lng)) for name, lat, lng in located
+    }
+    typical = statistics.median(distances.values())
+
+    for name, distance in distances.items():
+        if distance < OUTLIER_FLOOR_KM:
+            continue
+        if typical > 0 and distance < typical * OUTLIER_RATIO:
+            continue
+        # A warning, not an error. The coordinate may be perfectly correct for a
+        # directory that legitimately covers a wide area, and this tool has no
+        # way to tell that from a mistake -- but it is the one thing worth a
+        # second pair of eyes, because nothing else here can catch it.
+        report.warn(
+            f"sits {distance:,.0f} km from the rest of the directory "
+            f"(typical is {typical:,.0f} km) — check this is the right place",
+            name,
+            f"({[lat for n, lat, _ in located if n == name][0]}, "
+            f"{[lng for n, _, lng in located if n == name][0]})",
+        )
+
+
 def _check_hours(report: Report, who: str, entry: Dict) -> bool:
     raw = entry.get("hours")
     if raw is None:
@@ -307,6 +391,8 @@ def check(entries: List[Dict]) -> Report:
             "no emergency entry is marked always_open — an emergency at 3am would "
             "show only closed departments"
         )
+
+    _check_spread(report, entries)
 
     report.note(f"{len(entries)} entries, {len(covered)} of {len(SPECIALTIES)} specialities covered")
     report.note(f"{with_coordinates} of {len(entries)} have coordinates for distance sorting")
