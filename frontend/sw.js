@@ -31,19 +31,19 @@
 /* Bump to invalidate every cache. Old caches are deleted on activate, so a
  * stale shell cannot survive a deploy — a real hazard when the thing being
  * updated is medical guidance. */
-const CACHE_VERSION = "triage-v4";
+const CACHE_VERSION = "triage-v12";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const DATA_CACHE = `${CACHE_VERSION}-data`;
 
 /* Everything needed to render the app with no network at all. */
 /* The ?v= values must match index.html exactly. The browser requests
- * "app.js?v=2", so precaching a bare "app.js" would store a URL nothing ever
+ * "app.js?v=12", so precaching a bare "app.js" would store a URL nothing ever
  * asks for: the cache would look full and every request would still miss. */
 const SHELL_ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=4",
-  "./app.js?v=4",
+  "./styles.css?v=12",
+  "./app.js?v=12",
   "./manifest.json",
 ];
 
@@ -93,7 +93,24 @@ async function ensureShellCached() {
 
     if (!missing.length) return true;
 
-    await cache.addAll(SHELL_ASSETS);
+    /* cache: "reload" on every request, and this is not a detail.
+     *
+     * addAll goes through the normal fetch pipeline, so it will happily take
+     * whatever the browser's own HTTP cache is holding. That poisons the
+     * offline cache with a stale shell: observed here caching an index.html
+     * that still referenced app.js?v=4 while the very same addAll stored
+     * app.js?v=12 beside it. Offline, the page then asks for a version that was
+     * never cached, and the app that was supposed to work without a network
+     * loads a mixture of two builds.
+     *
+     * "reload" bypasses the HTTP cache and goes to the server, so what lands in
+     * the offline cache is what is actually deployed. It is also self-healing:
+     * a poisoned entry is replaced the next time the version changes.
+     *
+     * Still atomic — addAll rejects as a whole if any one request fails. */
+    await cache.addAll(
+      SHELL_ASSETS.map((asset) => new Request(asset, { cache: "reload" }))
+    );
     return true;
   } catch (error) {
     console.warn("[sw] could not cache the shell; will retry later:", error);

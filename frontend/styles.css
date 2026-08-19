@@ -14,19 +14,36 @@
 :root {
   color-scheme: light dark;
 
-  /* Neutrals */
-  --bg: #f6f8fb;
+  /* Neutrals. Biased a few degrees toward the teal accent rather than a pure
+     grey — a neutral that shares a hue with the accent reads as chosen, and a
+     pure #808080 reads as whatever the browser happened to default to. */
+  --bg: #f4f7f8;
   --bg-raised: #ffffff;
-  --bg-sunken: #eef1f6;
-  --border: #dde3ec;
-  --border-strong: #c3ccda;
-  --text: #16202e;
-  --text-muted: #5b6879;
+  --bg-sunken: #e8eef0;
+  --border: #d8e2e5;
+  --border-strong: #b6c6ca;
+  --text: #0f1d21;
+  --text-muted: #566a70;
 
-  /* Brand */
-  --brand: #0f6fdd;
-  --brand-strong: #0a55ac;
-  --brand-tint: #e7f1fd;
+  /* Brand. Deep teal rather than the usual medical blue: it holds its own
+     against the urgency reds and ambers without competing with them, which a
+     saturated blue does not. */
+  --brand: #0b7684;
+  --brand-strong: #075a66;
+  --brand-tint: #e2f1f3;
+
+  /* Translucent surfaces for the glass layer. Separate tokens because the
+     alpha has to change between themes — the same white at 70% that looks like
+     frosted glass on a light ground looks like fog on a dark one. */
+  --glass: rgba(255, 255, 255, .72);
+  --glass-border: rgba(255, 255, 255, .85);
+  --glass-blur: 18px;
+
+  /* Aurora wash behind the page. Three soft radial gradients rather than an
+     image, so it costs nothing to cache and works offline. */
+  --aurora-1: rgba(11, 118, 132, .13);
+  --aurora-2: rgba(86, 154, 197, .12);
+  --aurora-3: rgba(140, 190, 178, .10);
 
   /* Urgency */
   --emergency: #c0261f;
@@ -49,28 +66,55 @@
   --s6: 32px;
   --s7: 48px;
 
-  --radius: 10px;
-  --radius-lg: 14px;
-  --shadow: 0 1px 2px rgba(16, 26, 40, .06), 0 4px 16px rgba(16, 26, 40, .06);
-  --shadow-lift: 0 2px 6px rgba(16, 26, 40, .09), 0 12px 28px rgba(16, 26, 40, .10);
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
+
+  /* An elevation ladder rather than one shadow used everywhere. Each step adds
+     a wider, softer ambient layer on top of a tight contact shadow, which is
+     what makes a surface read as lifted rather than outlined. */
+  --shadow-sm: 0 1px 2px rgba(9, 30, 34, .05);
+  --shadow: 0 1px 2px rgba(9, 30, 34, .05), 0 4px 16px rgba(9, 30, 34, .06);
+  --shadow-lift: 0 2px 6px rgba(9, 30, 34, .08), 0 14px 34px -8px rgba(9, 30, 34, .14);
+  --shadow-hero: 0 3px 8px rgba(9, 30, 34, .09), 0 28px 60px -20px rgba(9, 30, 34, .22);
+
+  /* Fluid scale. One set of sizes that reads correctly from a 360px phone to a
+     desktop without a second breakpoint for type. */
+  --text-xs:  clamp(.72rem, .70rem + .08vw, .78rem);
+  --text-sm:  clamp(.82rem, .79rem + .12vw, .89rem);
+  --text-md:  clamp(.94rem, .91rem + .14vw, 1.02rem);
+  --text-lg:  clamp(1.08rem, 1.01rem + .3vw, 1.28rem);
+  --text-xl:  clamp(1.35rem, 1.19rem + .66vw, 1.8rem);
+  --text-2xl: clamp(1.75rem, 1.42rem + 1.35vw, 2.6rem);
 
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --shell: 1080px;
+
+  --ease: cubic-bezier(.22, .68, .32, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f151d;
-    --bg-raised: #161e28;
-    --bg-sunken: #1c2632;
-    --border: #2a3644;
-    --border-strong: #3a4859;
-    --text: #e8edf4;
-    --text-muted: #9aa8ba;
+    --bg: #0a1416;
+    --bg-raised: #101e21;
+    --bg-sunken: #16282c;
+    --border: #23383d;
+    --border-strong: #355056;
+    --text: #e4eef0;
+    --text-muted: #93a9ae;
 
-    --brand: #58a6ff;
-    --brand-strong: #7cbaff;
-    --brand-tint: #16273c;
+    --brand: #3fc9d6;
+    --brand-strong: #74dbe4;
+    --brand-tint: #0d2f34;
+
+    /* Dark glass is a lightened veil, not a whitened one. Reusing the light
+       theme's white at any alpha turns every panel into fog. */
+    --glass: rgba(22, 40, 44, .66);
+    --glass-border: rgba(120, 170, 178, .18);
+
+    --aurora-1: rgba(63, 201, 214, .12);
+    --aurora-2: rgba(70, 130, 180, .11);
+    --aurora-3: rgba(90, 160, 140, .09);
 
     --emergency: #ff7b72;
     --emergency-tint: #351b1c;
@@ -83,8 +127,10 @@
     --crisis: #b18cff;
     --crisis-tint: #241a3a;
 
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
     --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 16px rgba(0, 0, 0, .3);
-    --shadow-lift: 0 2px 6px rgba(0, 0, 0, .45), 0 12px 28px rgba(0, 0, 0, .38);
+    --shadow-lift: 0 2px 6px rgba(0, 0, 0, .45), 0 14px 34px -8px rgba(0, 0, 0, .5);
+    --shadow-hero: 0 3px 8px rgba(0, 0, 0, .5), 0 28px 60px -20px rgba(0, 0, 0, .65);
   }
 }
 
@@ -96,12 +142,36 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: 16px;
+  font-size: var(--text-md);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
 }
 
-h1, h2, h3 { line-height: 1.25; margin: 0; }
+/* The aurora ground. Three soft radial gradients on a fixed pseudo-element
+   rather than a background image: nothing to download, nothing to cache, and it
+   survives offline like the rest of the shell.
+
+   Fixed rather than scrolling so the page moves over the light instead of
+   dragging it along, which is what makes the panels read as sitting above
+   something. It is decorative, so it is hidden from assistive technology and
+   dropped entirely when printing. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(58vw 46vw at 12% -6%, var(--aurora-1), transparent 62%),
+    radial-gradient(52vw 44vw at 96% 8%, var(--aurora-2), transparent 60%),
+    radial-gradient(64vw 52vw at 48% 108%, var(--aurora-3), transparent 62%);
+}
+
+h1, h2, h3 { line-height: 1.2; margin: 0; letter-spacing: -.014em; }
+
+/* Long-form text sets its own widow control; headings balance across lines. */
+h1, h2, h3 { text-wrap: balance; }
 
 .shell {
   width: 100%;
@@ -240,11 +310,45 @@ h1, h2, h3 { line-height: 1.25; margin: 0; }
 
 /* ------------------------------------------------------------------ cards */
 .card {
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
   padding: var(--s5);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lift);
+
+  /* The frosted layer. Guarded because Firefox only enabled this by default
+     comparatively recently, and without the guard a browser lacking it would
+     render a flat translucent panel with the aurora showing straight through
+     the text behind it. @supports keeps the opaque fallback above. */
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+}
+
+/* Where blur is unavailable, fall back to a solid surface rather than a
+   translucent one — legibility over effect, every time. */
+@supports not (backdrop-filter: blur(1px)) {
+  .card { background: var(--bg-raised); border-color: var(--border); }
+}
+
+/* A hairline highlight along the top edge. This is the detail that separates
+   glass from "a div with opacity": real glass catches light where it meets the
+   surface behind it. */
+.card { position: relative; }
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .7), transparent);
+  pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .card::after {
+    background: linear-gradient(90deg, transparent, rgba(160, 220, 228, .22), transparent);
+  }
 }
 
 .field-label { display: block; font-weight: 600; margin-bottom: var(--s1); }
@@ -471,6 +575,130 @@ input[type="number"]:focus, select:focus { border-color: var(--brand); }
 @media print {
   /* Unanswered questions on a printout handed to a doctor are just noise. */
   .followup { display: none; }
+}
+
+/* ---------------------------------------------------------------- body map */
+.bodymap__layout {
+  display: grid;
+  gap: var(--s5);
+  grid-template-columns: minmax(150px, 210px) 1fr;
+  align-items: center;
+}
+
+@media (max-width: 560px) {
+  .bodymap__layout { grid-template-columns: 1fr; justify-items: center; }
+  .bodymap__side { text-align: center; }
+}
+
+/* A dark viewing panel in both themes, rather than following the page.
+   Deliberate: a lit region has to read as light, and light only reads as light
+   against something darker than itself. On a pale panel the same teal became a
+   grey tint — technically present, visually invisible. Borrowing the darkened
+   surface of a scan viewer solves it and suits the subject. */
+.bodymap__canvas {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: var(--s4) var(--s3);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(72% 58% at 50% 40%, #17323a, transparent 72%),
+    linear-gradient(170deg, #101f25, #0a161b);
+  border: 1px solid rgba(120, 190, 200, .16);
+  box-shadow: inset 0 1px 0 rgba(160, 220, 230, .12);
+}
+
+.bodymap__svg { width: 100%; max-width: 200px; height: auto; display: block; }
+
+/* The figure. Deliberately understated — an outline, not an illustration. A
+   rendered body would imply the app knows more about it than it does. */
+/* Barely-there fill and a luminous stroke. The fill only has to lift the body
+   off the panel; anything heavier covers the glow it is meant to reveal. Fixed
+   colours because the panel is fixed — these sit on the viewer, not the page. */
+.bodymap__figure {
+  fill: rgba(190, 230, 236, .07);
+  stroke: rgba(175, 220, 230, .5);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* Each lit region, sitting under the figure. Blur plus a moderate alpha reads
+   as light diffusing through tissue rather than a shape stuck on top. */
+.bodymap__region {
+  /* A brighter cyan than the page accent: this one has to glow on a dark
+     panel, where the deeper brand teal reads as almost black. */
+  fill: #4fd8e4;
+  opacity: .9;
+  /* Clipped to the body, so the blur softens the edge between lit and unlit
+     tissue rather than bleeding into a halo outside the silhouette. */
+  filter: blur(11px);
+  transform-origin: center;
+  animation: region-in .5s var(--ease) both;
+}
+
+.bodymap__region--outline { opacity: .42; filter: blur(18px); }
+.bodymap__region--head    { animation-delay: .04s; }
+.bodymap__region--chest   { animation-delay: .1s; }
+.bodymap__region--abdomen { animation-delay: .16s; }
+.bodymap__region--pelvis  { animation-delay: .22s; }
+.bodymap__region--limbs   { animation-delay: .28s; }
+
+@keyframes region-in {
+  from { opacity: 0; transform: scale(.86); }
+}
+
+.bodymap__note { font-size: var(--text-sm); margin: 0 0 var(--s3); max-width: 34ch; }
+
+.bodymap__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+@media (max-width: 560px) { .bodymap__legend { justify-content: center; } }
+
+.bodymap__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 5px var(--s3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+
+.bodymap__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex: none;
+}
+
+/* Region tints, so a chip is findable against the figure without relying on
+   position alone. Kept within one hue family: these identify a place on the
+   body, and must never be mistaken for the urgency palette. */
+.bodymap__dot--head    { background: #6f7fd6; }
+.bodymap__dot--chest   { background: var(--brand); }
+.bodymap__dot--abdomen { background: #4a9d8e; }
+.bodymap__dot--pelvis  { background: #6aa5c4; }
+.bodymap__dot--limbs   { background: #8a94b8; }
+.bodymap__dot--outline { background: var(--text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bodymap__region { animation: none; }
+}
+
+@media print {
+  /* The glow prints as a grey smear, and the legend already says everything the
+     figure does. */
+  .bodymap__canvas { display: none; }
 }
 
 /* -------------------------------------------------------- view transitions */

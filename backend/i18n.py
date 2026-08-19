@@ -177,6 +177,11 @@ UI_EN: Dict[str, str] = {
         "112 now rather than waiting."
     ),
     "offline_banner": "Offline — showing saved information. 112 still works.",
+    # body map
+    "bodymap_heading": "Where this affects you",
+    "bodymap_note": (
+        "Highlighted from what you described — not a scan or a measurement."
+    ),
     # follow-up questions
     "fu_heading": "A few more questions",
     "fu_intro": (

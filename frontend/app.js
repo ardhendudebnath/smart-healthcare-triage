@@ -269,6 +269,203 @@ function show(node, visible) {
   node.hidden = !visible;
 }
 
+/* ------------------------------------------------------------- body map */
+
+/* A simplified human form with the body systems the reported symptoms belong to
+ * lit up.
+ *
+ * Everything drawn here comes from data the app genuinely has: symptoms.py
+ * assigns each of the 79 symptoms to one of fourteen systems, and the backend
+ * returns that system with every symptom it recognised. Nothing is inferred
+ * about the body beyond "you told us about something in this system".
+ *
+ * That boundary is the whole design. Dashboards of this kind usually show
+ * organ-level percentages — a heart at 72% risk — which requires imaging and
+ * genomics this app does not have and will not pretend to. A region here means
+ * "you mentioned this", never "we measured this".
+ *
+ * Inline SVG rather than an image: it themes with CSS custom properties, scales
+ * without assets, costs nothing to cache, and works offline like the rest.
+ */
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/* Which region each system lights. Several systems share a region — ent, eye,
+ * dental and neurological are all head — which is correct: the map shows where
+ * to look, and the written list underneath says exactly what was understood. */
+const SYSTEM_REGIONS = {
+  neurological: "head",
+  mental_health: "head",
+  ent: "head",
+  eye: "head",
+  dental: "head",
+  cardiac: "chest",
+  respiratory: "chest",
+  digestive: "abdomen",
+  urinary: "pelvis",
+  womens_health: "pelvis",
+  musculoskeletal: "limbs",
+  skin: "outline",
+  general: "outline",
+  child: "outline",
+};
+
+function svgEl(tag, attrs) {
+  const node = document.createElementNS(SVG_NS, tag);
+  Object.entries(attrs || {}).forEach(([key, value]) =>
+    node.setAttribute(key, String(value))
+  );
+  return node;
+}
+
+/** The static silhouette. Drawn from simple primitives rather than one long
+ *  path, so each part stays readable and adjustable. */
+/* The figure, as data. Defined once and used twice: to stroke the visible
+ * silhouette, and to build the clip path that keeps the glow inside the body. */
+const BODY_PARTS = [
+  ["ellipse", { cx: 100, cy: 34, rx: 17, ry: 21 }],               // head
+  ["path", { d: "M94 52 L106 52 L108 66 L92 66 Z" }],             // neck
+  ["path", {                                                       // torso
+    d: "M100 64 Q78 68 72 82 Q68 104 70 126 Q71 150 74 172 " +
+       "Q76 190 78 200 L122 200 Q124 190 126 172 Q129 150 130 126 " +
+       "Q132 104 128 82 Q122 68 100 64 Z",
+  }],
+  ["path", { d: "M74 80 Q60 92 57 118 Q55 142 53 164 Q52 174 57 175 Q62 174 63 164 Q66 140 69 118 Q71 98 78 88 Z" }],
+  ["path", { d: "M126 80 Q140 92 143 118 Q145 142 147 164 Q148 174 143 175 Q138 174 137 164 Q134 140 131 118 Q129 98 122 88 Z" }],
+  ["path", { d: "M79 202 Q80 250 82 288 Q83 316 84 330 Q85 338 90 337 Q94 336 94 328 Q95 300 96 272 Q98 236 99 206 Z" }],
+  ["path", { d: "M121 202 Q120 250 118 288 Q117 316 116 330 Q115 338 110 337 Q106 336 106 328 Q105 300 104 272 Q102 236 101 206 Z" }],
+];
+
+const CLIP_ID = "bodymap-clip";
+
+function bodyOutline() {
+  const group = svgEl("g", { class: "bodymap__figure" });
+  BODY_PARTS.forEach(([tag, attrs]) => group.appendChild(svgEl(tag, attrs)));
+  return group;
+}
+
+/** A clip path shaped like the body, so the glow lights the inside of the
+ *  figure rather than spilling into a halo around it. Without this the effect
+ *  reads as a smudge behind a cut-out; with it, as illumination under skin. */
+function bodyClipPath() {
+  const defs = svgEl("defs", {});
+  const clip = svgEl("clipPath", { id: CLIP_ID });
+  BODY_PARTS.forEach(([tag, attrs]) => clip.appendChild(svgEl(tag, attrs)));
+  defs.appendChild(clip);
+  return defs;
+}
+
+/** The glow for one region, hidden until its system is implicated. */
+function regionShape(region) {
+  const shapes = {
+    head: ["ellipse", { cx: 100, cy: 34, rx: 19, ry: 23 }],
+    chest: ["ellipse", { cx: 100, cy: 105, rx: 27, ry: 24 }],
+    abdomen: ["ellipse", { cx: 100, cy: 155, rx: 26, ry: 22 }],
+    pelvis: ["ellipse", { cx: 100, cy: 192, rx: 24, ry: 16 }],
+    limbs: null, // drawn as a group below
+    outline: ["ellipse", { cx: 100, cy: 180, rx: 62, ry: 150 }],
+  };
+
+  if (region === "limbs") {
+    const group = svgEl("g", {});
+    [
+      { cx: 62, cy: 125, rx: 12, ry: 52 },
+      { cx: 138, cy: 125, rx: 12, ry: 52 },
+      { cx: 88, cy: 275, rx: 13, ry: 66 },
+      { cx: 112, cy: 275, rx: 13, ry: 66 },
+    ].forEach((attrs) => group.appendChild(svgEl("ellipse", attrs)));
+    return group;
+  }
+
+  const [tag, attrs] = shapes[region] || shapes.outline;
+  return svgEl(tag, attrs);
+}
+
+/**
+ * Draw the map for a set of symptom details.
+ * Returns null when there is nothing to show, so callers can hide the section.
+ */
+function buildBodyMap(details) {
+  const systems = [...new Set((details || []).map((d) => d.system).filter(Boolean))];
+  if (!systems.length) return null;
+
+  const regions = [...new Set(systems.map((s) => SYSTEM_REGIONS[s]).filter(Boolean))];
+
+  const svg = svgEl("svg", {
+    class: "bodymap__svg",
+    viewBox: "0 0 200 360",
+    // The figure is decorative; the meaning is in the labelled list beside it,
+    // which a screen reader can actually read. Announcing forty path elements
+    // would be noise, not access.
+    "aria-hidden": "true",
+    focusable: "false",
+  });
+
+  // Glow first and clipped to the body, figure stroked on top. Painting the
+  // regions over the figure turned the torso into a white haze that read as a
+  // rendering fault; unclipped underneath, they haloed outside the silhouette.
+  // Clipped underneath, they light the body from within — which is both better
+  // looking and the truer metaphor, since the region is inside the person.
+  svg.appendChild(bodyClipPath());
+
+  const glow = svgEl("g", {
+    class: "bodymap__regions",
+    "clip-path": `url(#${CLIP_ID})`,
+  });
+  regions.forEach((region) => {
+    const shape = regionShape(region);
+    shape.setAttribute("class", `bodymap__region bodymap__region--${region}`);
+    glow.appendChild(shape);
+  });
+  svg.appendChild(glow);
+
+  svg.appendChild(bodyOutline());
+
+  return { svg, systems };
+}
+
+function renderBodyMap(details) {
+  const section = $("bodymap-section");
+  const canvas = $("bodymap-canvas");
+  const legend = $("bodymap-legend");
+  if (!section) return;
+
+  canvas.textContent = "";
+  legend.textContent = "";
+
+  const map = buildBodyMap(details);
+  if (!map) {
+    show(section, false);
+    return;
+  }
+
+  canvas.appendChild(map.svg);
+
+  // The readable half. Every system gets a named chip, so the information the
+  // figure carries visually is also available as text.
+  map.systems.forEach((system) => {
+    const label = systemLabel(system);
+    if (!label) return;
+    const chip = el("li", "bodymap__chip");
+    chip.appendChild(el("span", `bodymap__dot bodymap__dot--${SYSTEM_REGIONS[system] || "outline"}`));
+    chip.appendChild(el("span", null, label));
+    legend.appendChild(chip);
+  });
+
+  show(section, true);
+}
+
+/** System names come from the backend with the symptom guide, so the map is
+ *  labelled in the reader's language like everything else.
+ *
+ *  Falling back to the raw id would print "musculoskeletal" at someone worried
+ *  about their knee, so an unresolved system drops its chip instead. The figure
+ *  still shows the region; only the unnameable label goes. */
+function systemLabel(systemId) {
+  const found = (symptomGroups || []).find((group) => group.id === systemId);
+  return found ? found.label : null;
+}
+
 /* ------------------------------------------------------- view transitions */
 
 /** True when the reader has asked the system for less animation. */
@@ -444,6 +641,14 @@ function paintResult(data) {
   const isCrisis = data.urgency_level === "crisis";
   show($("symptoms-section"), !isCrisis);
   if (!isCrisis) renderSymptoms(data.symptom_details || []);
+
+  // Same reasoning as the symptom list: a body diagram above a crisis result
+  // would be a distraction from the one number that person needs.
+  if (isCrisis) {
+    show($("bodymap-section"), false);
+  } else {
+    renderBodyMap(data.symptom_details || []);
+  }
 
   renderContacts(data.contacts);
   renderSpecialties(data.recommended_specialties);
@@ -938,6 +1143,20 @@ window.addEventListener("online", () => {
 window.addEventListener("offline", updateOfflineBanner);
 updateOfflineBanner();
 
+/* Also ask on every load, not only when connectivity returns.
+ *
+ * Caching during activate can fail on its own — seen here repeatedly, the
+ * worker activating with a partial shell — and waiting for an offline-to-online
+ * transition to repair it means a browser that never goes offline never
+ * recovers. Which is precisely backwards: the shell is needed before the
+ * network disappears, not after it comes back.
+ *
+ * Nearly free. ensureShellCached returns immediately when the shell is already
+ * complete, so the usual case is one message and no fetches. */
+navigator.serviceWorker?.ready
+  .then(() => askServiceWorkerToRetryCaching())
+  .catch(() => {});
+
 function registerServiceWorker() {
   // updateViaCache: "none" stops the browser serving sw.js from its own HTTP
   // cache. Without it the worker can outlive several deploys — it is the file
@@ -945,12 +1164,26 @@ function registerServiceWorker() {
   // the whole app to an old version, including old triage rules. Observed here:
   // a corrected worker registered as "active" while still running the previous
   // script, which is exactly the silent staleness this app cannot afford.
-  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch((error) => {
-    // A failed registration costs offline support and nothing else, so it is
-    // logged rather than surfaced. The app works exactly as it did before, and
-    // telling a worried person about a caching failure would be noise.
-    console.warn("Offline support unavailable:", error);
-  });
+  navigator.serviceWorker
+    .register("sw.js", { updateViaCache: "none" })
+    .then((registration) => {
+      // updateViaCache alone turned out not to be enough. A worker registered
+      // from an earlier visit stays active and its script is never re-fetched,
+      // so a deploy lands with the old worker still deciding what every asset
+      // is allowed to be. Observed here: a fresh registration reported
+      // "activated" while running the previous script and caching nothing.
+      //
+      // update() asks the browser to fetch the script and compare it, which is
+      // the only thing that reliably retires a stale worker. Cheap — one
+      // conditional request per load, and none at all if the bytes match.
+      return registration.update().catch(() => registration);
+    })
+    .catch((error) => {
+      // A failed registration costs offline support and nothing else, so it is
+      // logged rather than surfaced. The app works exactly as it did before,
+      // and telling a worried person about a caching failure would be noise.
+      console.warn("Offline support unavailable:", error);
+    });
 }
 
 if ("serviceWorker" in navigator) {
