@@ -66,17 +66,56 @@ EMERGENCY_OVERRIDE_PHRASES = {
 
 # Handled separately from medical emergencies: the right response is a crisis
 # counsellor, not an ambulance dispatcher.
+#
+# Indirect phrasing is included deliberately, and it is the more important half.
+# The explicit words below -- "kill myself", "suicide" -- are what someone writes
+# when they have already accepted what they are saying. Most disclosure does not
+# look like that. It sounds like not wanting to be here, not seeing the point,
+# or being tired of going on, and a list holding only the explicit forms answers
+# the people least likely to need convincing to ask for help while shrugging at
+# everyone else. Added after an evaluation run scored "I do not want to be here
+# anymore" as no recognised symptom at all.
+#
+# Kept broad on purpose. The cost of a false positive here is showing a
+# counselling number to someone who did not need it. The cost of a false
+# negative is the worst outcome this app has.
 CRISIS_PHRASES = [
+    # Explicit
     "kill myself",
     "killing myself",
     "end my life",
     "ending my life",
+    "end it all",
     "want to die",
     "suicidal",
     "suicide",
     "harm myself",
     "hurt myself",
     "self harm",
+    "take my own life",
+    # Indirect, and far more common
+    "do not want to be here",
+    "don't want to be here",
+    "dont want to be here",
+    "do not want to live",
+    "don't want to live",
+    "dont want to live",
+    "not want to live",
+    "no point in living",
+    "no point living",
+    "no reason to live",
+    "better off without me",
+    "better off dead",
+    "cannot go on",
+    "can not go on",
+    "can't go on",
+    "cant go on",
+    "tired of living",
+    "want it all to stop",
+    "want it to end",
+    "wish i was dead",
+    "wish i were dead",
+    "would be better if i was gone",
 ]
 
 # Intensity language. On its own this is not an emergency, but paired with a

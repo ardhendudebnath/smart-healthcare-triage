@@ -174,10 +174,21 @@ CRISIS_PHRASES_INDIC = [
     "खुद को नुकसान", "मर जाऊ", "खत्म कर दू",
     "marna chah", "jaan de", "atmahatya", "khudkushi",
     "jeena nahi chah", "mar jau",
+    # Hindi, indirect. Same reasoning as the English list in safety.py: most
+    # disclosure is not the explicit word.
+    "जीने का मन नहीं", "जीने की इच्छा नहीं", "अब नहीं जीना",
+    "सब खत्म कर", "थक गया हूँ जीने से",
+    "jine ka man nahi", "ab nahi jeena",
     # Bengali
     "মরে যেতে চাই", "মরতে চাই", "আত্মহত্যা", "বেঁচে থাকতে চাই না",
     "নিজেকে শেষ করে", "নিজের ক্ষতি", "আত্মঘাতী",
     "more jete chai", "morte chai", "atmohotya", "beche thakte chai na",
+    # Bengali, other verb forms of "do not want to live". Bengali has several
+    # and the list held only one: "আমি আর বাঁচতে চাই না" -- as ordinary a
+    # sentence as any here -- was scored as no recognised symptom at all.
+    "বাঁচতে চাই না", "বাঁচতে ইচ্ছে করছে না", "আর বাঁচব না",
+    "কোনও মানে নেই বেঁচে",
+    "bachte chai na", "ar bachbo na",
 ]
 
 # Plain-language emergencies in Hindi and Bengali, mirroring the English

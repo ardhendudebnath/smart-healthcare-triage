@@ -97,6 +97,33 @@ SYMPTOMS: List[Symptom] = [
             "pressure in my chest",
             "heaviness in my chest",
             "crushing feeling in my chest",
+            # Matching is anchored on contiguous word runs, so a phrase only
+            # fires when the words appear together in that order. "pain in my
+            # chest" therefore misses "pain in the middle of my chest" — which
+            # is how a textbook heart attack was described in an evaluation
+            # case, and it scored as no symptom at all.
+            "pain in the middle of my chest",
+            "pain in the centre of my chest",
+            "pain in the center of my chest",
+            "crushing pain",
+            "crushing chest pain",
+            "chest feels heavy",
+            "band around my chest",
+            "elephant sitting on my chest",
+            # Radiation to the arm is the detail that makes chest pain cardiac
+            # until proven otherwise. Kept here because these phrases describe
+            # pain that started in the chest.
+            "pain going down my arm",
+            "pain down my left arm",
+            "pain spreading to my arm",
+            # Jaw pain is deliberately NOT listed here, though adding it would
+            # catch atypical presentations that currently score as nothing.
+            # This symptom's label is "Chest pain", and the result panel shows
+            # what was understood: someone who wrote "my jaw is aching" would be
+            # told the app read chest pain, which they never said. Catching more
+            # by describing people's symptoms back to them incorrectly is not a
+            # trade this app should make. Jaw pain wants its own symptom in a
+            # cardiac rule — see the note in eval_cases.py under mi-atypical.
         ],
     ),
     Symptom(
@@ -162,6 +189,12 @@ SYMPTOMS: List[Symptom] = [
             "turning blue",
             "bluish skin",
             "fingertips are blue",
+            "lips have gone blue",
+            "lips went blue",
+            "lips gone blue",
+            "looking blue",
+            "gone grey",
+            "looks grey",
             "going grey",
         ],
     ),
@@ -184,6 +217,27 @@ SYMPTOMS: List[Symptom] = [
             "gasping",
             "struggling to breathe",
             "out of breath at rest",
+            # The negated forms are listed explicitly, and they have to be.
+            # Negation detection suppresses a symptom mentioned after "cannot",
+            # unless the phrase itself contains the negation — which is why
+            # "cannot breathe" is spelled out above rather than left to "breathe".
+            # "catch my breath" alone hits the same trap in reverse: the plain
+            # phrase matches, and then "I cannot catch my breath" is read as a
+            # denial of breathlessness by someone who is breathless.
+            "cannot catch my breath",
+            "can not catch my breath",
+            "can't catch my breath",
+            "cant catch my breath",
+            "catch my breath",
+            "catch her breath",
+            "catch his breath",
+            "cannot get enough air",
+            "can not get enough air",
+            "winded just sitting",
+            "puffing at rest",
+            "breathing fast",
+            "breathing very fast",
+            "panting at rest",
         ],
     ),
     Symptom(
@@ -331,6 +385,22 @@ SYMPTOMS: List[Symptom] = [
             "cannot move my arm",
             "can not lift my arm",
             "cannot lift my arm",
+            # A stroke is usually reported by whoever is standing next to the
+            # person, so the third-person and past-tense forms matter as much as
+            # the first-person ones. "his face has dropped on one side" scored
+            # as nothing in evaluation.
+            "face has dropped",
+            "face dropped",
+            "face has fallen",
+            "one side of his face",
+            "one side of her face",
+            "cannot lift his arm",
+            "can not lift his arm",
+            "cannot lift her arm",
+            "can not lift her arm",
+            "arm has gone weak",
+            "weak down one side",
+            "weakness on one side",
         ],
     ),
     Symptom(
@@ -442,6 +512,13 @@ SYMPTOMS: List[Symptom] = [
             "belly pain",
             "stomach cramp",
             "pain in my stomach",
+            "pain in my tummy",
+            "pain in my belly",
+            "tummy hurt",
+            "belly hurt",
+            "pain low in my tummy",
+            "lower right of my tummy",
+            "pain in my abdomen",
         ],
     ),
     Symptom(
@@ -725,6 +802,10 @@ SYMPTOMS: List[Symptom] = [
             "lower back pain",
             "my back hurt",
             "pain in my back",
+            "back is aching",
+            "back has been aching",
+            "back aching",
+            "ache in my back",
         ],
     ),
     Symptom(
@@ -887,6 +968,12 @@ SYMPTOMS: List[Symptom] = [
         phrases=[
             "lost my vision",
             "lost my sight",
+            "lost the sight",
+            "lost vision in one eye",
+            "lost sight in one eye",
+            "cannot see out of one eye",
+            "can not see out of one eye",
+            "blind in one eye",
             "can not see",
             "cannot see",
             "sudden blindness",
@@ -1043,6 +1130,16 @@ SYMPTOMS: List[Symptom] = [
             "feverish",
             "high temperature",
             "running a temperature",
+            # "has a temperature" is the ordinary way a parent reports a fever,
+            # and it was missing: "my six week old has a temperature" — an
+            # emergency at that age — extracted nothing.
+            "has a temperature",
+            "have a temperature",
+            "had a temperature",
+            "got a temperature",
+            "temperature is up",
+            "hot to touch",
+            "burning hot",
             "burning up",
             "chills",
             "shivering",
