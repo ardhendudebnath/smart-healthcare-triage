@@ -93,7 +93,7 @@ refresh the browser.
 smt/Scripts/python.exe -m pytest backend
 ```
 
-122 tests, covering symptom extraction (including negation, typo tolerance and
+151 tests, covering symptom extraction (including negation, typo tolerance and
 the three-language vocabulary), urgency rules, age and duration escalation,
 opening-hours logic, safety overrides, version stamping, the audit trail, the
 follow-up questions and the API endpoints.
@@ -107,6 +107,52 @@ before changing anything they cover:
 - `test_every_phrase_finds_its_own_symptom` walks all 487 phrases in the
   vocabulary and asserts each one still extracts the symptom that owns it,
   catching phrases made unreachable by a lemma clash.
+
+**Passing tests are not the same as being accurate.** They check that the code
+does what it was written to do, and they phrase their inputs the way the
+vocabulary spells them. Accuracy is measured separately, below.
+
+## Accuracy
+
+```bash
+cd backend && ../smt/Scripts/python.exe evaluation.py
+```
+
+Scores realistic descriptions against expected urgency grades. The headline is
+the count of **dangerous misses** — an urgent or emergency case graded too low,
+a crisis disclosure that never reached the counselling path, or someone sent to
+a counsellor when they needed a doctor. A single accuracy figure would hide
+these: over-triage wastes an afternoon, under-triage can kill someone. A minor
+complaint the app asks you to rephrase is counted, but separately, because it is
+not dangerous.
+
+Two sets, and the difference between them is the point:
+
+| Set | File | Score | What it means |
+| --- | --- | --- | --- |
+| Development | `eval_cases.py` | 92% exact, 0 dangerous | Tuned against. Optimistic by construction. |
+| **Held out** | `eval_holdout.py` | **42% exact, 25 of 55 dangerous** | Never tuned against. The honest number. |
+
+The development set's failures were read and the vocabulary was changed until
+they passed, so its score measures fit rather than understanding. The held-out
+cases were written in one sitting, labelled before any were run, and scored
+once. The gap between 92% and 42% is how much of the first figure was fitting.
+
+**Do not tune against the held-out set.** Reading a failing case and patching it
+turns it into a development case with extra steps. The default report therefore
+prints aggregates only — how accurate, and which broad clinical areas are weak.
+Naming a weak area is the point: go and write *new* development cases there, fix
+those, and see whether the improvement carries over. `--holdout --reveal` shows
+the cases and spends them; `eval_holdout.py` documents the rotation that follows.
+`FINGERPRINT` in that file is hashed by the tests, so a label cannot be softened
+without a second, conspicuous edit.
+
+Both sets were labelled by the same non-clinician who wrote the rules, so they
+measure consistency, not correctness. Removing the tuning bias does not remove
+that one. The eventual fix is a clinician reviewing the labels — fifty vignettes
+is an afternoon where six thousand lines of rules is a project — and real
+descriptions from real people, which `/audit/unrecognised` starts collecting the
+day this is used.
 
 ## API
 

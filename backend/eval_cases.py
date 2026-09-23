@@ -53,6 +53,9 @@ class Case:
     # Set when the app is known to disagree, with the reason. Counted and
     # reported separately rather than quietly excluded.
     expected_miss: bool = False
+    # A broad clinical area. Used by the held-out report to say where the app is
+    # weak without saying which cases it failed — see eval_holdout.py.
+    category: str = ""
 
 
 CASES = [
